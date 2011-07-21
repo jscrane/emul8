@@ -1,0 +1,7 @@
+o Nat Pryce (np2@doc.ic.ac.uk) wrote `Chain' and `Chainable' for the 
+  Regis library of abstract data types.
+o Frans Faase (I think) wrote a C emulation of the 6502 which is
+  the basis of the C++ version here.
+
+Needless to say, any bugs present are entirely mine!
+Stephen Crane, January 1998

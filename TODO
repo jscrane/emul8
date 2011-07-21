@@ -1,0 +1,3 @@
+Optimise display: cut out the scripted access ``display_at''.
+Find out exactly how fast this machine is: write a delay loop.
+Change semantics of Stop/Reset/Start to Stop/Reset/Restart

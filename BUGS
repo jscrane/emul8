@@ -1,0 +1,2 @@
+* Intermittent bug with restart after (keyboard) stop, reset, start
+* Must clean-up when open new configuration (remove old Tcl commands, etc.)

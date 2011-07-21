@@ -1,0 +1,267 @@
+#!/usr/bin/wish
+
+source /usr/share/tcltk/tk8.4/dialog.tcl
+
+proc status {s} {
+  tk_dialog .d {Machine Error} $s {} 0 OK
+  .menu.machine.m entryconfigure "State..." -state normal
+  .menu.machine.m entryconfigure "Stop" -state disabled
+  .menu.machine.m entryconfigure "Reset" -state normal
+}
+
+proc mapelt {x0 y0 x1 y1 name addr count} {
+  .display.memorymap create text $x0 $y0 -anchor e -text $addr
+  if {$name=="empty"} { 
+    set colour "yellow" 
+  } else {
+    set colour "red"
+    set x2 [expr $x1+20]
+    set y2 [expr ($y0+$y1)/2]
+    .display.memorymap create line $x1 $y2 $x2 $y2 -arrow first
+    .display.memorymap create text $x2 $y2 -anchor w -text $name
+  }
+  .display.memorymap create rectangle $x0 $y0 $x1 $y1 \
+    -fill $colour -outline black
+}
+
+proc memorymap {} {
+  query .q
+  set l [.q next]
+  set addr [lindex $l 0]
+  set count [lindex $l 1]
+  set lastcount 0
+  set name [lindex $l 2]
+  set x0 30
+  set x1 110
+  set y0 10
+  set y1 $y0
+  .display.memorymap delete all
+  while {[.q]} {
+    set l [.q next]
+    set thisname [lindex $l 2]
+    set thiscount [lindex $l 1]
+    if { $thisname == $name} {
+      set count [expr $count+$thiscount]
+    } else {
+      if { $lastcount > 0 && $lastcount < 2048 } {
+        set addr ""
+        set lastcount [expr $lastcount+$count]
+      } else {
+        set lastcount $count
+      }
+      set y1 [expr $y0+$count/256]
+      mapelt $x0 $y0 $x1 $y1 $name $addr $count
+      set addr [lindex $l 0]
+      set count $thiscount
+      set name $thisname
+      set y0 $y1
+    }
+  }
+  mapelt $x0 $y0 $x1 [expr $y0+$count/256] $name $addr $count
+  .q delete
+}
+
+proc unimplemented {name} {
+  tk_dialog .d {NYI} "Sorry, `$name' has not been implemented yet." {} 0 OK
+}
+
+proc unchanged {} {
+  .menu.file.m entryconfigure "Save" -state disabled
+  .menu.file.m entryconfigure "Save As..." -state disabled
+  .menu.file.m entryconfigure "Open..." -command file_open
+  .menu.file.m entryconfigure "Exit" -command exit
+}
+
+proc changed {} {
+  .menu.file.m entryconfigure "Save" -state normal
+  .menu.file.m entryconfigure "Save As..." -state normal
+  .menu.file.m entryconfigure "Open..." -command chk_open
+  .menu.file.m entryconfigure "Exit" -command chk_exit
+}
+
+proc file_load {name} {
+  global config_name
+  global appname
+  set config_name $name
+  source $name
+  reset_cpu
+  .menu.machine.m entryconfigure "Start" -state normal
+  memorymap
+  wm title . "$appname ($config_name)"
+}
+
+proc file_open {} {
+  set types {
+    {{TCL Scripts}      {.tcl}        }
+    {{All Files}        *             }
+  }
+  set name [tk_getOpenFile -filetypes $types]
+  if { $name != "" } { file_load $name }
+}
+
+proc chk_open {} {
+  global config_name
+  set response [tk_dialog .d {Open} \
+    "Save changed configuration `$config_name'?" \
+    {} 0 Yes No]
+  if {$response==0} {
+    if {$config_name=="Untitled"} {
+      file_save_as 
+    } else { 
+      file_save 
+    }
+  }
+  file_open
+}
+
+proc chk_exit {} {
+  set response [tk_dialog .d {Exit} \
+    "The configuration has been changed, really exit?" \
+    {} 1 Yes No]
+  if { $response == 0 } { exit }
+}
+
+proc file_save {} {
+  global config_name
+  set stream [open $config_name w]
+  query .q
+  while {[.q]} {
+    set l [.q next]
+    set nlist [split [lindex $l 2]]
+    set dev [lindex $nlist 0]
+    if { $dev == "empty" } { continue }
+    puts -nonewline $stream "device $dev 0x[lindex $l 0] 0x[format %04x [lindex $l 1]]"
+    if {[llength $nlist] > 1} {
+      puts -nonewline $stream " [lrange $nlist 1 end]"
+    }
+    puts $stream ""
+  }
+  .q delete
+  close $stream
+  unchanged
+}
+
+proc file_save_as {} {
+  global config_name
+  set types {
+    {{TCL Scripts}      {.tcl}        }
+    {{All Files}        *             }
+  }
+  set name [tk_getSaveFile -filetypes $types]
+  if { $name != "" } {
+    set config_name $name
+    file_save
+  }
+}
+
+proc start {} {
+  .menu.machine.m entryconfigure "Stop" -state normal
+  .menu.machine.m entryconfigure "Start" -state disabled
+  .menu.machine.m entryconfigure "Reset" -state disabled
+  .menu.machine.m entryconfigure "State..." -state disabled
+  start_cpu 
+  update
+}
+
+proc stop {} { 
+  .menu.machine.m entryconfigure "Start" -state normal
+  .menu.machine.m entryconfigure "State..." -state normal
+  .menu.machine.m entryconfigure "Reset" -state normal
+  stop_cpu 
+  update
+}
+
+proc state {} {
+  # should use a fixed-pitch font for this
+  tk_dialog .d {Machine State} [eval cpu_state] {} 0 OK
+}
+
+set appname "8-bit Emulator"
+set config_name "Untitled"
+
+frame .menu -bd 2 -relief ridge
+pack .menu -side top -fill x
+frame .display
+pack .display -side bottom
+
+menubutton .menu.file -text "File" -underline 0 -relief raised \
+	-menu .menu.file.m
+menu .menu.file.m
+.menu.file.m add command -label "Open..." -underline 0 -accelerator "Alt+O" \
+ 	-command file_open
+bind . <Alt-o> { file_open }
+bind . <Alt-O> { file_open }
+.menu.file.m add command -label "Save" -underline 0 -command file_save
+.menu.file.m add command -label "Save As..." -underline 5 -command file_save_as
+.menu.file.m add separator
+.menu.file.m add command -label "Exit" -underline 1 -accelerator "Alt+X" \
+	-command exit
+bind . <Alt-x> { exit }
+bind . <Alt-X> { exit }
+
+menubutton .menu.machine -text "Machine" -underline 0 -relief raised \
+	-menu .menu.machine.m
+menu .menu.machine.m
+.menu.machine.m add command -label "Start" \
+  -underline 0 -accelerator "Alt+Q" -state disabled -command start
+bind . <Alt-q> { start }
+bind . <Alt-Q> { start }
+.menu.machine.m add command -label "Stop" \
+  -underline 3 -accelerator "Alt+S" -state disabled -command stop
+bind . <Alt-s> { stop }
+bind . <Alt-S> { stop }
+.menu.machine.m add command -label "Reset" \
+  -underline 0 -state disabled -command { 
+    .menu.machine.m entryconfigure "Start" -state normal
+    .menu.machine.m entryconfigure "Reset" -state disabled
+    reset_cpu
+    update
+  }
+.menu.machine.m add separator
+.menu.machine.m add command -label "State..." \
+  -underline 2 -accelerator "Alt+A" -state disabled -command state
+bind . <Alt-a> { state }
+bind . <Alt-A> { state }
+.menu.machine.m add command -label "Configure..." -underline 0 -command {
+  unimplemented "Configure..."
+  # iff changed...
+  changed
+  .menu.machine.m entryconfigure "Start" -state normal
+}
+menubutton .menu.devices -text "Devices" -underline 0 -relief raised \
+	-menu .menu.devices.m
+menu .menu.devices.m
+
+menubutton .menu.help -text "Help" -underline 0 -relief raised \
+	-menu .menu.help.m
+menu .menu.help.m
+.menu.help.m add command -label "About..." -underline 0 -command {
+  tk_dialog .d {About} "$appname (c) 1997,8 Stephen Crane" {} 0 OK
+}
+
+canvas .display.memorymap -height 300 -width 200 -relief ridge
+
+pack .menu.file .menu.machine .menu.devices -side left
+pack .menu.help -side right
+pack .display -side bottom -expand 1 -fill both
+pack .display.memorymap -expand 1 -fill both
+
+# load interpreter extensions
+#
+set machine [exec uname -m]
+set os [exec uname -s]
+set hosttype $machine
+
+load $machine-$os/tk-emul8.so Emulator
+
+# check command-line
+#
+if { $argc != 0 } {
+  set f $argv
+  if { [file isdirectory $f] } { set f $f/config.tcl }
+  file_load $f
+} else {
+  unchanged
+  memorymap
+  wm title . "$appname ($config_name)"
+}
