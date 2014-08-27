@@ -47,6 +47,34 @@ private:
 
 	void irq ();
 	void nmi ();
+	byte flags();
+
+	/* stack */
+	inline void pusha (Memory::address ret) {
+	  (*_memory)[0x0100+S--] = ret >> 8;
+	  (*_memory)[0x0100+S--] = ret & 0xff;
+	}
+
+	inline void pushb (byte b) {
+	  (*_memory)[0x0100+S--] = b;
+	}
+
+	inline byte popb () {
+	  return (*_memory)[++S+0x0100];
+	}
+
+	inline Memory::address popa () {
+	  byte b = popb ();
+	  return ((popb () << 8) | b);
+	}
+
+	static const Memory::address nmivec = 0xfffa;
+	static const Memory::address resvec = 0xfffc;
+	static const Memory::address ibvec = 0xfffe;
+	
+	inline Memory::address vector(Memory::address v) {
+	  return ((*_memory)[v+1] << 8) | (*_memory)[v];
+	}
 
 	/* operators */
 	inline void _cmp (byte a) { Z=N=A-a; C=(A>=a); }
@@ -106,6 +134,11 @@ private:
 		Z=N=(*_memory)[a]-1; (*_memory)[a]=Z;
 	}
 	inline void _bit (byte z) { V=((z & 0x40)!=0); N=(z & 0x80); Z=(A & z); }
+	inline void _bra() {
+		byte b = (*_memory)[PC];
+		PC += b;
+		if (b > 127) PC -= 0x0100;
+	}
 
 	/* dispatch table */
 	typedef void (r6502::*OP)(); OP _ops[256];
@@ -117,7 +150,6 @@ private:
 	void nop2 () { PC++; }
 	void ora_z () { _ora ((*_memory)[_z()]); }
 	void asl_z () { _asl (_z()); }
-	void php_ ();
 	void php ();
 	void ora_ () { _ora ((*_memory)[PC++]); }
 	void asl () { C=(A&0x80)!=0; Z=N=A<<=1; }
@@ -125,7 +157,7 @@ private:
 	void ora_a () { _ora ((*_memory)[_a()]); }
 	void asl_a () { _asl (_a()); }
 	// 10
-	void bpl () { if (!(N & 0x80)) PC += (short)(char)(*_memory)[PC]; PC++; }
+	void bpl () { if (!(N & 0x80)) _bra(); PC++; }
 	void ora_iy () { _ora ((*_memory)[_iy()]); }
 	void ora_zx () { _ora ((*_memory)[_zx()]); }
 	void asl_zx () { _asl (_zx()); }
@@ -147,7 +179,7 @@ private:
 	void and_a () { _and ((*_memory)[_a()]); }
 	void rol_a () { _rol (_a()); }
 	// 30
-	void bmi () { if (N & 0x80) PC += (short)(char)(*_memory)[PC]; PC++; }
+	void bmi () { if (N & 0x80) _bra(); PC++; }
 	void and_iy () { _and ((*_memory)[_iy()]); }
 	void and_zx () { _and ((*_memory)[_zx()]); }
 	void rol_zx () { _rol (_zx()); }
@@ -160,14 +192,14 @@ private:
 	void eor_ix () { _eor ((*_memory)[_ix()]); }
 	void eor_z () { _eor ((*_memory)[_z()]); }
 	void lsr_z () { _lsr (_z()); }
-	void pha () { (*_memory)[0x100+S--] = A; }
+	void pha () { pushb (A); }
 	void eor_ () { _eor ((*_memory)[PC++]); }
 	void lsr_ () { A=__lsr(A); }
 	void jmp () { PC = _a (); }
 	void eor_a () { _eor ((*_memory)[_a()]); }
 	void lsr_a () { _lsr (_a()); }
 	// 50
-	void bvc () { if (!V) PC += (short)(char)(*_memory)[PC]; PC++; }
+	void bvc () { if (!V) _bra(); PC++; }
 	void eor_iy () { _eor ((*_memory)[_iy()]); }
 	void eor_zx () { _eor ((*_memory)[_zx()]); }
 	void lsr_zx () { _lsr (_zx()); }
@@ -180,14 +212,14 @@ private:
 	void adc_ix () { _adc ((*_memory)[_ix()]); }
 	void adc_z () { _adc ((*_memory)[_z()]); }
 	void ror_z () { _ror (_z()); }
-	void pla () { Z=N=A=(*_memory)[0x100+ ++S]; }
+	void pla () { Z=N=A=popb (); }
 	void adc_ () { _adc ((*_memory)[PC++]); }
 	void ror_ () { A=__ror (A); }
 	void jmp_i () { PC = _i(_a()); }
 	void adc_a () { _adc ((*_memory)[_a()]); }
 	void ror_a () { _ror (_a()); }
 	// 70
-	void bvs () { if (V) PC += (short)(char)(*_memory)[PC]; PC++; }
+	void bvs () { if (V) _bra(); PC++; }
 	void adc_iy () { _adc ((*_memory)[_iy()]); }
 	void adc_zx () { _adc ((*_memory)[_zx()]); }
 	void ror_zx () { _ror (_zx ()); }
@@ -206,7 +238,7 @@ private:
 	void sta_a () { (*_memory)[_a()] = A; }
 	void stx_a () { (*_memory)[_a()] = X; }
 	// 90
-	void bcc () { if (!C) PC += (short)(char)(*_memory)[PC]; PC++; }
+	void bcc () { if (!C) _bra(); PC++; }
 	void sta_iy () { (*_memory)[_iy()] = A; }
 	void sty_zx () { (*_memory)[_zx()] = Y; }
 	void sta_zx () { (*_memory)[_zx()] = A; }
@@ -232,7 +264,7 @@ private:
 	void ldx_a () { _ldx ((*_memory)[_a()]); }
 	void lax_a () { lda_a (); X=A; }
 	// b0
-	void bcs () { if (C) PC += (short)(char)(*_memory)[PC]; PC++; }
+	void bcs () { if (C) _bra(); PC++; }
 	void lda_iy () { _lda ((*_memory)[_iy()]); }
 	void lax_iy () { lda_iy (); X=A; }
 	void ldy_zx () { _ldy ((*_memory)[_zx()]); }
@@ -259,7 +291,7 @@ private:
 	void cmp_a () { _cmp ((*_memory)[_a()]); }
 	void dec_a () { _dec (_a()); }
 	// d0
-	void bne () { if (Z) PC += (short)(char)(*_memory)[PC]; PC++; }
+	void bne () { if (Z) _bra(); PC++; }
 	void cmp_iy () { _cmp ((*_memory)[_iy()]); }
 	void cmp_zx () { _cmp ((*_memory)[_zx()]); }
 	void dec_zx () { _dec (_zx()); }
@@ -279,7 +311,7 @@ private:
 	void sbc_a () { _sbc ((*_memory)[_a()]); }
 	void inc_a () { _inc (_a()); }
 	// f0
-	void beq () { if (!Z) PC += (short)(char)(*_memory)[PC]; PC++; }
+	void beq () { if (!Z) _bra(); PC++; }
 	void sbc_iy () { _sbc ((*_memory)[_iy()]); }
 	void sbc_zx () { _sbc ((*_memory)[_zx()]); }
 	void inc_zx () { _inc (_zx()); }

@@ -8,25 +8,33 @@
 
 Memory::address r6502::run (unsigned clocks) {
 	while (clocks--) 
-#ifdef DEBUG
 	{
 		byte op = (*_memory)[PC];
-		_status ("%04x: %02x [%02x %02x %02x, %02x]\n", PC, op, A, X, Y, P.value);
+#ifdef CPU_DEBUG
+		_status ("%04x: %02x [%02x %02x %02x, %02x]\n", PC, op, A, X, Y, flags());
+#endif
 		PC++;
 		(this->*_ops[op]) ();
 	}
-#else
-		(this->*_ops[(*_memory)[PC++]]) ();
-#endif
 	return PC;
+}
+
+byte r6502::flags() {
+	P.bits.N = ((N & 0x80) != 0);
+	P.bits.V = V;
+	P.bits.Z = !Z;
+	P.bits.C = C;
+	P.bits._ = 1;
+	return P.value;
 }
 
 char *r6502::status () {
 	static char buf[128];
+	flags();
 	sprintf (buf, "aa xx yy sp nv_bdizc  _pc_\n"
-		 "%02x %02x %02x %02x %d%d1%d%d%d%d%d  %04x\n", 
-		 A, X, Y, S, (N & 0x80)!=0, V!=0, P.bits.B, 
-		 P.bits.D, P.bits.I, Z==0, C!=0, PC);
+		 "%02x %02x %02x %02x %d%d%d%d%d%d%d%d  %04x\n", 
+		 A, X, Y, S, P.bits.N, P.bits.V, P.bits._, P.bits.B,
+		 P.bits.D, P.bits.I, P.bits.Z, P.bits.C, PC);
 	return buf;
 }
 
@@ -40,34 +48,24 @@ void r6502::raise (int level) {
 }
 
 void r6502::irq () {
-	Memory::address ret = PC+1;
-	(*_memory)[0x0100+S--] = ret >> 8;
-	(*_memory)[0x0100+S--] = ret & 0xff;
+	pusha (PC+1);
 	P.bits.B = 0;
-	php_ ();
+	pushb (flags ());
+	P.bits.B = 1;
 	P.bits.I = 1;
-	PC = ((*_memory)[0xffff] << 8) | (*_memory)[0xfffe];
+	PC = vector (ibvec);
 	_irq = false;
 }
 
 // php and plp are complicated by the representation
 // of the processor state for efficient normal operation
-void r6502::php_ () {
-	P.bits.N = ((N & 0x80) != 0);
-	P.bits.V = V;
-	P.bits.Z = !Z;
-	P.bits.C = C;
-	P.bits._ = 1;
-	(*_memory)[0x0100+S--] = P.value;
-	P.bits.B = 1;
-}
 void r6502::php () {
 	P.bits.B = 1;
-	php_ ();
+	pushb (flags ());
 }
 
 void r6502::plp () {
-	P.value = (*_memory)[++S+0x0100];
+	P.value = popb ();
 	N = P.bits.N? 0x80: 0;
 	V = P.bits.V;
 	Z = !P.bits.Z;
@@ -75,43 +73,36 @@ void r6502::plp () {
 }
 
 void r6502::rts () {
-	byte b = (*_memory)[++S+0x0100];
-	PC = (((*_memory)[++S+0x0100] << 8) | b)+1;
+	PC = popa () + 1;
 }
 
 void r6502::rti () {
 	plp ();
-	byte b = (*_memory)[++S+0x0100];
-	PC = ((*_memory)[++S+0x0100] << 8) | b;
+	PC = popa ();
 }
 
 void r6502::nmi () {
-	(*_memory)[0x0100+S--] = PC >> 8;
-	(*_memory)[0x0100+S--] = PC & 0xff;
+	pusha (PC);
 	php ();
 	P.bits.I = 1;
-	PC = ((*_memory)[0xfffb] << 8) | (*_memory)[0xfffa];
+	PC = vector (nmivec);
 }
 
 void r6502::brk () {
 	if (!P.bits.I) {
-		Memory::address ret = PC+1;
-		(*_memory)[0x0100+S--] = ret >> 8;
-		(*_memory)[0x0100+S--] = ret & 0xff;
+		pusha (PC+1);
 		P.bits.B = 1;
 		php ();
 		P.bits.I = 1;
-		PC = ((*_memory)[0xffff] << 8) | (*_memory)[0xfffe];
+		PC = vector (ibvec);
 	}
 	P.bits.B = 1;
 	P.bits._ = 1;
 }
 
 void r6502::jsr () {
-	Memory::address ret = PC+1;
-	(*_memory)[0x0100+S--] = ret >> 8;
-	(*_memory)[0x0100+S--] = ret & 0xff;
-	PC = ((*_memory)[PC+1] << 8) | (*_memory)[PC];
+	pusha (PC+1);
+	PC = vector (PC);
 }
 
 void r6502::_adc (byte d) {
@@ -152,7 +143,7 @@ void r6502::reset () {
 	P.bits.B = 1;
 	_irq = false;
 	S = 0xff;
-	PC = ((*_memory)[0xfffd] << 8) | (*_memory)[0xfffc];
+	PC = vector (resvec);
 }
 
 r6502::r6502 (Memory *m, jmp_buf *e, CPU::statfn s): CPU (m,e,s) {
