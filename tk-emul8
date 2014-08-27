@@ -1,6 +1,6 @@
 #!/usr/bin/wish
 
-source /usr/share/tcltk/tk8.4/dialog.tcl
+source /usr/share/tcltk/tk8.5/dialog.tcl
 
 proc status {s} {
   tk_dialog .d {Machine Error} $s {} 0 OK

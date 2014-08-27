@@ -21,7 +21,7 @@ class Memory;
 class CPU {
 public:
 	virtual void reset () =0;
-	virtual void run (unsigned instructions) =0;
+	virtual Memory::address run (unsigned instructions) =0;
 	virtual void raise (int level) =0;
 	virtual char *status () =0;
 

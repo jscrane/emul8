@@ -8,19 +8,19 @@
 #pragma interface
 #endif
 
-#ifndef _CPU_H
-#include <cpu.h>
-#endif
-
 #ifndef _MEMORY_H
 #include <memory.h>
+#endif
+
+#ifndef _CPU_H
+#include <cpu.h>
 #endif
 
 class r6502: public CPU {
 public:
 	void raise (int);
 	void reset ();
-	void run (unsigned);
+	Memory::address run (unsigned);
 	char *status ();
 
 	r6502 (Memory *, jmp_buf *, CPU::statfn);
@@ -31,14 +31,14 @@ private:
 	byte N, V, B, D, I, Z, C;
 	union {
 		struct {
-			unsigned N:1;
-			unsigned V:1;
-			unsigned _:1;		// unused
-			unsigned B:1;
-			unsigned D:1;
-			unsigned I:1;
-			unsigned Z:1;
 			unsigned C:1;
+			unsigned Z:1;
+			unsigned I:1;
+			unsigned D:1;
+			unsigned B:1;
+			unsigned _:1;		// unused
+			unsigned V:1;
+			unsigned N:1;
 		} bits;
 		byte value;
 	} P;
@@ -72,11 +72,12 @@ private:
 	inline Memory::address _i (Memory::address a) { 
 		return ((*_memory)[a+1]<<8)|(*_memory)[a]; 
 	}
-	inline Memory::address _ix () { return _i((*_memory)[PC++]+X); }
+	inline Memory::address _ix () { return _i(_zx()); }
 	inline Memory::address _iy () { return _i((*_memory)[PC++])+Y; }
 
 	void _adc (byte a);
-	void _sbc (byte a);
+	void _sbc (byte a) { if (P.bits.D) sbcd(a); else _adc(~a); }
+	void sbcd (byte a);
 
 	inline byte __ror (byte b) {
 		N=b>>1; if (C) N|=0x80; C=b&1; return Z=N;
@@ -104,6 +105,7 @@ private:
 	inline void _dec (Memory::address a) {
 		Z=N=(*_memory)[a]-1; (*_memory)[a]=Z;
 	}
+	inline void _bit (byte z) { V=((z & 0x40)!=0); N=(z & 0x80); Z=(A & z); }
 
 	/* dispatch table */
 	typedef void (r6502::*OP)(); OP _ops[256];
@@ -115,6 +117,7 @@ private:
 	void nop2 () { PC++; }
 	void ora_z () { _ora ((*_memory)[_z()]); }
 	void asl_z () { _asl (_z()); }
+	void php_ ();
 	void php ();
 	void ora_ () { _ora ((*_memory)[PC++]); }
 	void asl () { C=(A&0x80)!=0; Z=N=A<<=1; }
@@ -134,13 +137,13 @@ private:
 	// 20
 	void jsr ();
 	void and_ix () { _and ((*_memory)[_ix()]); }
-	void bit_z () { N=(*_memory)[_z ()]; V=(N & 0x40); Z=(A & N); }
+	void bit_z () { _bit ((*_memory)[_z()]); }
 	void and_z () { _and ((*_memory)[_z()]); }
 	void rol_z () { _rol (_z()); }
 	void plp ();
 	void and_ () { _and ((*_memory)[PC++]); }
 	void rol () { A=__rol (A); }
-	void bit_a () { N=(*_memory)[_a()]; V=(N & 0x40); Z=(A & N); }
+	void bit_a () { _bit ((*_memory)[_a()]); }
 	void and_a () { _and ((*_memory)[_a()]); }
 	void rol_a () { _rol (_a()); }
 	// 30

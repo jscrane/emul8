@@ -66,14 +66,19 @@ int main(int argc, char *argv[])
   // initialise vectored start address
   memory[0xfffc] = 0x00;
   memory[0xfffd] = 0x04;
+  Memory::address opc = 0xfffc;
 
   jmp_buf ex;
   r6502 cpu(&memory, &ex, status);
   cpu.reset();
 
   if (!setjmp(ex))
-    while (true)
-      cpu.run(100);
+    while (true) {
+      Memory::address pc = cpu.run(1111);
+      if (pc == opc)
+        break;
+      opc = pc;
+    }
 
   printf(cpu.status());
 }

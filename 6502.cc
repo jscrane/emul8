@@ -6,24 +6,25 @@
 
 #include "6502.h"
 
-void r6502::run (unsigned clocks) {
+Memory::address r6502::run (unsigned clocks) {
 	while (clocks--) 
 #ifdef DEBUG
 	{
 		byte op = (*_memory)[PC];
-		_status ("Executing %02x at %04x\n", op, PC);
+		_status ("%04x: %02x [%02x %02x %02x, %02x]\n", PC, op, A, X, Y, P.value);
 		PC++;
-		_ops[op] ();
+		(this->*_ops[op]) ();
 	}
 #else
 		(this->*_ops[(*_memory)[PC++]]) ();
 #endif
+	return PC;
 }
 
 char *r6502::status () {
 	static char buf[128];
 	sprintf (buf, "aa xx yy sp nv_bdizc  _pc_\n"
-		 "%02x %02x %02x %02x %d%d1%d%d%d%d%d  %04x", 
+		 "%02x %02x %02x %02x %d%d1%d%d%d%d%d  %04x\n", 
 		 A, X, Y, S, (N & 0x80)!=0, V!=0, P.bits.B, 
 		 P.bits.D, P.bits.I, Z==0, C!=0, PC);
 	return buf;
@@ -42,7 +43,8 @@ void r6502::irq () {
 	Memory::address ret = PC+1;
 	(*_memory)[0x0100+S--] = ret >> 8;
 	(*_memory)[0x0100+S--] = ret & 0xff;
-	php ();
+	P.bits.B = 0;
+	php_ ();
 	P.bits.I = 1;
 	PC = ((*_memory)[0xffff] << 8) | (*_memory)[0xfffe];
 	_irq = false;
@@ -50,12 +52,18 @@ void r6502::irq () {
 
 // php and plp are complicated by the representation
 // of the processor state for efficient normal operation
-void r6502::php () {
-	P.bits.N = (N & 0x80);
+void r6502::php_ () {
+	P.bits.N = ((N & 0x80) != 0);
 	P.bits.V = V;
 	P.bits.Z = !Z;
 	P.bits.C = C;
+	P.bits._ = 1;
 	(*_memory)[0x0100+S--] = P.value;
+	P.bits.B = 1;
+}
+void r6502::php () {
+	P.bits.B = 1;
+	php_ ();
 }
 
 void r6502::plp () {
@@ -95,6 +103,8 @@ void r6502::brk () {
 		P.bits.I = 1;
 		PC = ((*_memory)[0xffff] << 8) | (*_memory)[0xfffe];
 	}
+	P.bits.B = 1;
+	P.bits._ = 1;
 }
 
 void r6502::jsr () {
@@ -106,40 +116,40 @@ void r6502::jsr () {
 
 void r6502::_adc (byte d) {
 	if (P.bits.D) {
-		int r = _fromBCD[A]+_fromBCD[d]+C;
-		Z = N = _toBCD[r];
+		int r = _fromBCD[A] + _fromBCD[d] + C;
 		C = (r > 99);
+		if (C) r -= 100;
+		A = _toBCD[r];
 	} else {
-		unsigned short r = C+(unsigned short)A+(unsigned short)d;
-		Z = N = r;
-		C = (r > 255);
+		unsigned short u = (unsigned short)A + (unsigned short)d + (unsigned short)C;
+		short s = (char)A + (char)d + (char)C;
+		C = (u < 0 || u > 255);
+		V = (s > 127 || s < -128);
+		A = (u & 0xff);
 	}
-	V = (Z ^ A) & 0x80;
-	A = Z;
+	N = (A & 0x80);
+	Z = A;
 }
 
-void r6502::_sbc (byte d) {
-	if (P.bits.D) {
-		int r = _fromBCD[A] - _fromBCD[d] - !C;
-		if (r < 0) r += 100;
-		Z = N = _toBCD[r];
-	} else {
-		unsigned short r = A-d-!C;
-		Z = N = r & 0xff;
-	}
-	C = (A >= (d+!C));
-	V = (Z ^ A) & 0x80;
-	A = Z;
+void r6502::sbcd (byte d) {
+	int r = _fromBCD[A] - _fromBCD[d] - !C;
+	C = (r >= 0);
+	if (r < 0) r += 100;
+	A = _toBCD[r & 0xff];
+	N = (A & 0x80);
+	Z = A;
+	// V not tested for: http://www.6502.org/tutorials/decimal_mode.html
 }
 
 void r6502::ill () {
-	_status ("Illegal instruction!");
+	_status ("Illegal instruction!\n");
 	longjmp (*_err, 1);
 }
 
 void r6502::reset () {
 	P.value = 0;
 	P.bits._ = 1;
+	P.bits.B = 1;
 	_irq = false;
 	S = 0xff;
 	PC = ((*_memory)[0xfffd] << 8) | (*_memory)[0xfffc];
@@ -147,7 +157,7 @@ void r6502::reset () {
 
 r6502::r6502 (Memory *m, jmp_buf *e, CPU::statfn s): CPU (m,e,s) {
 
-	for (int i=256; i--; ) {
+	for (int i=0; i < 256; i++) {
 		_fromBCD[i] = ((i >> 4) & 0x0f)*10 + (i & 0x0f);
 		_toBCD[i] = (((i % 100) / 10) << 4) | (i % 10);
 	}

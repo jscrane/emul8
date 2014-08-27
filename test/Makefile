@@ -1,11 +1,13 @@
-CPPFLAGS=-I..
+CPPFLAGS=-I.. -DDEBUG
+#CPPFLAGS=-I..
 CXXFLAGS=-g
+LDLIBS=-L../i686-Linux -lemu -ldl
 
 test: test.o 6502.o
-	g++ -g -o test test.o 6502.o -L../i686-Linux -lemu -ldl
+	g++ -o $@ $+ $(LDLIBS)
 
-6502.o: ../6502.cc ../6502.h
-	g++ -g -I.. -DDEBUG=1 -c ../6502.cc -o 6502.o
+6502.o: ../6502.cc
+	g++ $(CXXFLAGS) $(CPPFLAGS) -o $@ -c $<
 
 clean:
 	rm -f test test.o 6502.o
