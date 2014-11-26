@@ -25,7 +25,7 @@ int main(int argc, char *argv[])
       n = fscanf(f, "%02x", &c);
     if (!(i % 8))
       printf("\n\t");
-    if (n == 0)
+    if (n <= 0)
       break;
     printf("0x%02x, ", c);
   }
