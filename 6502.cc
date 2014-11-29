@@ -6,17 +6,16 @@
 
 #include "6502.h"
 
-Memory::address r6502::run (unsigned clocks) {
+void r6502::run (unsigned clocks) {
 	while (clocks--) 
 	{
-		byte op = (*_memory)[PC];
+		byte op = _mem[PC];
 #ifdef CPU_DEBUG
 		_status ("%04x: %02x [%02x %02x %02x, %02x]\n", PC, op, A, X, Y, flags());
 #endif
 		PC++;
 		(this->*_ops[op]) ();
 	}
-	return PC;
 }
 
 byte r6502::flags() {
@@ -146,7 +145,7 @@ void r6502::reset () {
 	PC = vector (resvec);
 }
 
-r6502::r6502 (Memory *m, jmp_buf *e, CPU::statfn s): CPU (m,e,s) {
+r6502::r6502 (Memory &m, jmp_buf *e, CPU::statfn s): CPU (m,e,s) {
 
 	for (int i=0; i < 256; i++) {
 		_fromBCD[i] = ((i >> 4) & 0x0f)*10 + (i & 0x0f);
@@ -221,6 +220,6 @@ r6502::r6502 (Memory *m, jmp_buf *e, CPU::statfn s): CPU (m,e,s) {
 }
 
 // module initialisation
-extern "C" CPU *init_6502 (Memory *m, jmp_buf *e, CPU::statfn s) {
+extern "C" CPU *init_6502 (Memory &m, jmp_buf *e, CPU::statfn s) {
 	return new r6502 (m, e, s);
 }

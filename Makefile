@@ -11,8 +11,8 @@ OBJECTS	= $(foreach f, $(SOURCES), $(TARGET)/$(f:.cc=.o))
 LIBRARY	= libemu
 DYLIB	= $(TARGET)/$(LIBRARY).so
 LIBRARIES = $(DYLIB)
-MODSRC	= tk-emul8.cc 6502.cc ram.cc rom.cc display.cc kbduk_tk.cc tapeuk_tk.cc
-MODHDR	= 6502.h ram.h display.h rom.h acia.h
+MODSRC	= tk-emul8.cc 6502.cc ram.cc rom.cc display.cc kbduk_tk.cc tapeuk_tk.cc i8080.cc
+MODHDR	= 6502.h ram.h display.h rom.h acia.h i8080.h
 MODOBJ	= $(foreach m, $(MODSRC), $(TARGET)/$(m:.cc=.so))
 TCLDIR	= tcllib/
 TCLHDRS = /usr/include/tcl8.5

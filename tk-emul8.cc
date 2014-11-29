@@ -72,7 +72,7 @@ extern "C" int Processor (ClientData d, Tcl_Interp *i, int ac, const char **av) 
 		return TCL_ERROR;
 	}
 	Memory *m = (Memory *)d;
-	CPU *cpu = CPU::build (av[1], m, &ex, status);
+	CPU *cpu = CPU::build (av[1], *m, &ex, status);
 	if (!cpu) {
 		Tcl_SetResult (i, "Unknown processor: ", TCL_STATIC);
 		Tcl_AppendElement (i, av[1]);

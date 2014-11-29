@@ -21,21 +21,28 @@ class Memory;
 class CPU {
 public:
 	virtual void reset () =0;
-	virtual Memory::address run (unsigned instructions) =0;
+	virtual void run (unsigned instructions) =0;
 	virtual void raise (int level) =0;
 	virtual char *status () =0;
 
 	typedef void (*statfn) (const char *, ...);
-	typedef CPU *(*buildfn) (Memory *, jmp_buf *, statfn);
+	typedef CPU *(*buildfn) (Memory &, jmp_buf *, statfn);
 
 	static class Builder: private Loader {
 	public:
-		CPU *operator() (const char *, Memory *, jmp_buf *, statfn);
+		CPU *operator() (const char *, Memory &, jmp_buf *, statfn);
 	} build;
+
+	Memory::address pc() { return PC; }
+
+	void debug();
+
 protected:
-	CPU (Memory *m, jmp_buf *e, statfn s): _memory(m), _err(e), _status(s){}
-	Memory *_memory;
+	Memory &_mem;
+	CPU (Memory &m, jmp_buf *e, statfn s): _mem(m), _err(e), _status(s) {}
+	Memory::address PC;
 	jmp_buf *_err;
 	statfn _status;
+	bool _debug;
 };
 #endif

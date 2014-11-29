@@ -21,6 +21,7 @@
 #endif
 
 typedef unsigned char byte;
+typedef unsigned short word;
 
 class Memory {
 public:
