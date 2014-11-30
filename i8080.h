@@ -98,7 +98,7 @@ private:
 	inline void _sr(byte b) { SR = b; flags._ = 0; flags.__ = 1; }
 
 	inline void _dad(word w) {
-		long r = HL + w;
+		unsigned long r = HL + w;
 		HL = (r & 0xffff);
 		flags.C = (r > 0xffff);
 	}
