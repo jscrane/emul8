@@ -70,11 +70,29 @@ private:
 		_mem[a+1] = (w >> 8);
 	}
 
-	inline void _flg(byte r) {
+	inline void _szp(byte r) {
 		flags.S = ((r & 0x80) != 0);
 		flags.Z = (r == 0);
-		flags.H = !((r & 0x0f) == 0x0f);
 		flags.P = parity_table[r];
+	}
+
+	inline void _szhp(byte b, byte r) {
+		_szp(r);
+		flags.H = ((b & 0x0f) > (r & 0x0f));
+	}
+
+	inline void _inc(byte &b) {
+		word w = b + 1;
+		byte r = w & 0xff;
+		_szhp(b, r);
+		b = r;
+	}
+
+	inline void _dec(byte &b) {
+		word w = b - 1;
+		byte r = w & 0xff;
+		_szhp(b, r);
+		b = r;
 	}
 
 	inline void _sr(byte b) { SR = b; flags._ = 0; flags.__ = 1; }
@@ -89,24 +107,24 @@ private:
 	void lxib() { BC = _rw(PC); PC += 2; }
 	void staxb() { _mem[BC] = A; }
 	void inxb() { BC++; }
-	void inrb() { _flg(++B); }
-	void dcrb() { _flg(--B); }
+	void inrb() { _inc(B); }
+	void dcrb() { _dec(B); }
 	void mvib() { B = _mem[PC++]; }
 	void rlc() { flags.C = ((A & 0x80) >> 7); A = (A << 1) | flags.C; }
 
 	void dadb() { _dad(BC); }
 	void ldaxb() { A = _mem[BC]; }
 	void dcxb() { BC--; }
-	void inrc() { _flg(++C); }
-	void dcrc() { _flg(--C); }
+	void inrc() { _inc(C); }
+	void dcrc() { _dec(C); }
 	void mvic() { C = _mem[PC++]; }
 	void rrc() { flags.C = (A & 0x01); A = (A >> 1) | (flags.C << 7); }
 
 	void lxid() { DE = _rw(PC); PC += 2; }
 	void staxd() { _mem[DE] = A; }
 	void inxd() { DE++; }
-	void inrd() { _flg(++D); }
-	void dcrd() { _flg(--D); }
+	void inrd() { _inc(D); }
+	void dcrd() { _dec(D); }
 	void mvid() { D = _mem[PC++]; }
 	void ral() { 
 		byte b = (A << 1) | flags.C;
@@ -117,8 +135,8 @@ private:
 	void dadd() { _dad(DE); }
 	void ldaxd() { A = _mem[DE]; }
 	void dcxd() { DE--; }
-	void inre() { _flg(++E); }
-	void dcre() { _flg(--E); }
+	void inre() { _inc(E); }
+	void dcre() { _dec(E); }
 	void mvie() { E = _mem[PC++]; }
 	void rar() {
 		byte b = (A >> 1) | (flags.C << 7);
@@ -129,31 +147,31 @@ private:
 	void lxih() { HL = _rw(PC); PC += 2; }
 	void shld() { _sw(_rw(PC), HL); PC += 2; }
 	void inxh() { HL++; }
-	void inrh() { _flg(++H); }
-	void dcrh() { _flg(--H); }
+	void inrh() { _inc(H); }
+	void dcrh() { _dec(H); }
 	void mvih() { H = _mem[PC++]; }
 	void daa();
 	void dadh() { _dad(HL); }
 	void lhld() { HL = _rw(_rw(PC)); PC += 2; }
 	void dcxh() { HL--; }
-	void inrl() { _flg(++L); }
-	void dcrl() { _flg(--L); }
+	void inrl() { _inc(L); }
+	void dcrl() { _dec(L); }
 	void mvil() { L = _mem[PC++]; }
 	void cma() { A = ~A; }
 
 	void lxisp() { SP = _rw(PC); PC += 2; }
 	void sta() { _mem[_rw(PC)] = A; PC += 2; }
 	void inxsp() { SP++; }
-	void inrm() { byte b = _mem[HL]+1; _mem[HL] = b; _flg(b); }
-	void dcrm() { byte b = _mem[HL]-1; _mem[HL] = b; _flg(b); }
+	void inrm() { byte b = _mem[HL]; _inc(b); _mem[HL] = b; }
+	void dcrm() { byte b = _mem[HL]; _dec(b); _mem[HL] = b; }
 	void mvim() { byte b = _mem[PC++]; _mem[HL] = b; }
 	void stc() { flags.C = 1; }
 
 	void dadsp() { _dad(SP); }
 	void lda() { A = _mem[_rw(PC)]; PC += 2; }
 	void dcxsp() { SP--; }
-	void inra() { _flg(++A); }
-	void dcra() { _flg(--A); }
+	void inra() { _inc(A); }
+	void dcra() { _dec(A); }
 	void mvia() { A = _mem[PC++]; }
 	void cmc() { flags.C = !flags.C; }
 	void movbb() {}
@@ -222,11 +240,12 @@ private:
 	void movam() { A = _mem[HL]; }
 	void movaa() {}
 
-	inline void _add(byte b) {
-		word w = A + b;
-		flags.C = w > 0xff;
+	inline void _add(byte x) {
+		word w = A + x;
+		byte b = A;
 		A = w & 0xff;
-		_flg(A);
+		_szhp(b, A);
+		flags.C = w > 0xff;
 	}
 
 	void addb() { _add(B); }
@@ -238,11 +257,12 @@ private:
 	void addm() { _add(_mem[HL]); }
 	void adda() { _add(A); }
 
-	inline void _adc(byte b) {
-		word w = A + b + flags.C;
-		flags.C = w > 0xff;
+	inline void _adc(byte x) {
+		word w = A + x + flags.C;
+		byte b = A;
 		A = w & 0xff;
-		_flg(A);
+		_szhp(b, A);
+		flags.C = w > 0xff;
 	}
 
 	void adcb() { _adc(B); }
@@ -254,11 +274,12 @@ private:
 	void adcm() { _adc(_mem[HL]); }
 	void adca() { _adc(A); }
 
-	inline void _sub(byte b) {
-		word w = A - b;
-		flags.C = w > 0xff;
+	inline void _sub(byte x) {
+		word w = A - x;
+		byte b = A;
 		A = w & 0xff;
-		_flg(A);
+		_szhp(b, A);
+		flags.C = w > 0xff;
 	}
 
 	void subb() { _sub(B); }
@@ -270,11 +291,12 @@ private:
 	void subm() { _sub(_mem[HL]); }
 	void suba() { _sub(A); }
 
-	inline void _sbc(byte b) {
-		word w = A - b - flags.C;
-		flags.C = w > 0xff;
+	inline void _sbc(byte x) {
+		word w = A - x - flags.C;
+		byte b = A;
 		A = w & 0xff;
-		_flg(A);
+		_szhp(b, A);
+		flags.C = w > 0xff;
 	}
 
 	void sbbb() { _sbc(B); }
@@ -288,7 +310,7 @@ private:
 
 	inline void _and(byte b) {
 		A = A & b;
-		_flg(A);
+		_szp(A);
 		flags.C = flags.H = 0;
 	}
 
@@ -303,7 +325,7 @@ private:
 
 	inline void _xor(byte b) {
 		A = A ^ b;
-		_flg(A);
+		_szp(A);
 		flags.C = flags.H = 0;
 	}
 
@@ -318,7 +340,7 @@ private:
 
 	inline void _or(byte b) {
 		A = A | b;
-		_flg(A);
+		_szp(A);
 		flags.C = flags.H = 0;
 	}
 
@@ -333,8 +355,8 @@ private:
 
 	inline void _cmp(byte b) {
 		word w = A - b;
+		_szhp(b, w & 0xff);
 		flags.C = w > 0xff;
-		_flg(w & 0xff);
 	}
 
 	void cmpb() { _cmp(B); }
