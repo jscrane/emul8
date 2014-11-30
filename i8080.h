@@ -146,7 +146,7 @@ private:
 	void inxsp() { SP++; }
 	void inrm() { byte b = _mem[HL]+1; _mem[HL] = b; _flg(b); }
 	void dcrm() { byte b = _mem[HL]-1; _mem[HL] = b; _flg(b); }
-	void mvim() { _mem[HL] = _mem[PC++]; }
+	void mvim() { byte b = _mem[PC++]; _mem[HL] = b; }
 	void stc() { flags.C = 1; }
 
 	void dadsp() { _dad(SP); }

@@ -61,17 +61,15 @@ char *i8080::status() {
 }
 
 void i8080::daa() {
-	if (flags.H || (A & 0x0f) > 9) {
-		word r = A + 0x06;
-		flags.C = (r & 0x100) != 0;
-		flags.H = (A & 0x0f) > (r & 0x0f);
-		A = (r & 0xff);
+	byte c = flags.C, a = 0, hi = (A & 0xf0) >> 4, lo = A & 0x0f;
+	if (flags.H || lo > 9)
+		a = 0x06;
+	if (flags.C || hi > 0x9 || (hi >= 0x9 && lo > 9)) {
+		a |= 0x60;
+		c = 1;
 	}
-	if (flags.C || (A & 0xf0) > 0x90) {
-		word r = A + 0x60;
-		flags.C = (r & 0x100) != 0;
-		A = r & 0xff;
-	}
+	_add(a);
+	flags.C = c;
 }
 
 void i8080::hlt() {

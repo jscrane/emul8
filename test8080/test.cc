@@ -36,7 +36,7 @@ private:
 	Memory &_mem;
 };
 
-int load(Memory &memory, const char *file) {
+int load_hex(Memory &memory, const char *file) {
 	FILE *f = fopen(file, "r");
 	if (!f) {
 		perror("fopen");
@@ -73,6 +73,19 @@ int load(Memory &memory, const char *file) {
 	return err;
 }
 
+int load_com(Memory &memory, const char *file, unsigned short a) {
+	int fd = open(file, O_RDONLY);
+	if (fd < 0) {
+		perror("open");
+		return -1;
+	}
+	unsigned char c;
+	while (read(fd, &c, 1) == 1)
+		memory[a++] = c;
+	close(fd);
+	return 0;
+}
+
 void status(const char *fmt, ...) {
 	char tmp[128];
 	va_list args;
@@ -92,7 +105,7 @@ int main(int argc, char *argv[])
 	Memory memory;
 	ram ram(65536);
 	memory.put(ram, 0x0000);
-	if (0 > load(memory, argv[1]))
+	if (0 > load_com(memory, argv[1], 0x100))
 		return -1;
 
 	jmp_buf ex;
@@ -100,7 +113,7 @@ int main(int argc, char *argv[])
 	i8080 cpu(memory, &ex, status, ports);
 	cpu.reset();
 	cpu.run(256);
-//	cpu.debug();
+	cpu.debug();
 	memory[0] = 0x76;	// hlt
 	memory[5] = 0x79;	// movac
 	memory[6] = 0xd3;	// out
@@ -110,12 +123,10 @@ int main(int argc, char *argv[])
 
 	if (!setjmp(ex))
 		while (true) {
-			cpu.run(1111);
+			cpu.run(1);
 			Memory::address pc = cpu.pc();
 			if (pc == opc)
 				break;
 			opc = pc;
 		}
-
-	printf(cpu.status());
 }
