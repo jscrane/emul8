@@ -1224,7 +1224,7 @@ NBYTES	DW	0	;byte counter used by TYPE.
 ;
 ;   Room for expansion?
 ;
-	DB	0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+	DB	0,0,0,0,0,0,0,0,0,0,0,0,0,
 ;
 ;   Note that the following six bytes must match those at
 ; (PATTRN1) or cp/m will HALT. Why?
