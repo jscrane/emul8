@@ -6,6 +6,7 @@
 #include <string.h>
 #include <sys/select.h>
 #include <errno.h>
+#include <curses.h>
 
 #include "memory.h"
 #include "ports.h"
@@ -16,6 +17,7 @@
 int dsk[4];
 byte seldsk, settrk, setsec, trk = 0xff, sec = 0xff;
 word setdma;
+WINDOW *mainwin;
 
 class Ports: public PortDevice {
 public:
@@ -41,9 +43,14 @@ public:
 
 	byte in(byte port, i8080 *cpu) { 
 		byte c = 0;
-		if (port == 4)
+		if (port == 4) {
 			read(0, &c, 1);
-		else if (port == 14) {
+			if (c == 0x03) {
+				delwin(mainwin);
+				endwin();
+				exit(0);
+			}
+		} else if (port == 14) {
 			// read (from dsk)
 			int d = dsk[seldsk];
 			if (trk != settrk || sec != setsec) {
@@ -65,7 +72,10 @@ public:
 			fd_set fd;
 			FD_ZERO(&fd);
 			FD_SET(0, &fd);
-			if (select(1, &fd, 0, 0, &tm) == 1)
+			int n = select(1, &fd, 0, 0, &tm);
+			if (0 > n)
+				perror("select");
+			else if (n == 1)
 				c = 0xff;
 		}
 		else {
@@ -122,6 +132,16 @@ int main(int argc, char *argv[])
 	if (optind >= argc)
 		return usage(argv);
 
+	mainwin = initscr();
+	if (!mainwin) {
+		perror("ncurses");
+		return -1;
+	}
+
+	cbreak();
+	raw();
+	noecho();
+
 	Memory memory;
 	ram ram(65536);
 	memory.put(ram, 0x0000);
@@ -144,6 +164,7 @@ int main(int argc, char *argv[])
 		}
 	}
 
+	// set up jump to bios
 	memory[0] = 0xc3;
 	memory[1] = 0x00;
 	memory[2] = 0xfa;
