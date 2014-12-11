@@ -99,6 +99,7 @@ int i8080::parity_table[] = {
 i8080::i8080(Memory &m, jmp_buf *jb, CPU::statfn s, PortDevice &d): CPU(m, jb, s)
 {
 	_ports = &d;
+	_debug = false;
 
 	OP *p = _ops;
 

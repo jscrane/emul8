@@ -309,9 +309,11 @@ private:
 	void sbba() { _sbc(A); }
 
 	inline void _and(byte b) {
+		flags.H = ((A | b) & 0x08) != 0;
 		A = A & b;
 		_szp(A);
-		flags.C = flags.H = 0;
+//		flags.C = flags.H = 0;
+		flags.C = 0;
 	}
 
 	void anab() { _and(B); }
