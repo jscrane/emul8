@@ -409,8 +409,8 @@ CHECK	LDAX	D
 	RZ
 	CPI	':'
 	RZ
-;	CPI	';'
-;	RZ
+	CPI	59	; a semicolon
+	RZ
 	CPI	'<'
 	RZ
 	CPI	'>'
