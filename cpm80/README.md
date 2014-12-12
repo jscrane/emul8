@@ -7,7 +7,10 @@ Sources:
 [here](http://maben.homeip.net/static/S100/software/DRI/sourcecode/CPM22/),
 and compiled with [asm8080](http://sourceforge.net/projects/asm8080/)
 - blank.cpm was created with
-> tr \\000 \\345 </dev/zero | dd  of=foo.cpm count=256256 bs=1
+```
+tr \\000 \\345 </dev/zero | dd  of=foo.cpm count=256256 bs=1
+```
+- populate images with [cpmtools](http://www.moria.de/~michael/cpmtools/)
 
 Other useful CP/M links:
 - http://www.retrotechnology.com/dri/howto_cpm.html
@@ -15,5 +18,5 @@ Other useful CP/M links:
 - http://www.gaby.de/cpm/
 - http://cpuville.com/cpm_on_new_computer.html
 - Ben Ryves has a nice [set of posts](http://benryves.com/journal/tags/CP/M) 
-describing a Z80-based CP/M machine.
+describing construction of a modern Z80-based CP/M machine.
 
