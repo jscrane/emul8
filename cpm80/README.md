@@ -6,6 +6,8 @@ Sources:
 - CPM22.ASM and CBIOS.ASM were found 
 [here](http://maben.homeip.net/static/S100/software/DRI/sourcecode/CPM22/),
 and compiled with [asm8080](http://sourceforge.net/projects/asm8080/)
+- blank.cpm was created with
+> tr \\000 \\345 </dev/zero | dd  of=foo.cpm count=256256 bs=1
 
 Other useful CP/M links:
 - http://www.retrotechnology.com/dri/howto_cpm.html
@@ -14,3 +16,4 @@ Other useful CP/M links:
 - http://cpuville.com/cpm_on_new_computer.html
 - Ben Ryves has a nice [set of posts](http://benryves.com/journal/tags/CP/M) 
 describing a Z80-based CP/M machine.
+
