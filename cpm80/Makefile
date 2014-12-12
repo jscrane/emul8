@@ -16,3 +16,7 @@ cpm: cpm.o i8080.o ram.o
 
 clean:
 	rm -f cpm *.o *.bin *.lst *.hex
+
+blank:
+	tr \\000 \\345 </dev/zero | dd  of=blank.cpm count=256256 bs=1
+	

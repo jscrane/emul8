@@ -1,16 +1,13 @@
 Runs CP/M 2.2 for i8080 under emulation on Linux.
 
 Sources:
-- _cpma.cpm_ and _zork1.cpm_ are from Stefan Tramm's nice
+- CPM disk images are from Stefan Tramm's fine
 [Intel 8080 CPU Emulator](http://www.tramm.li/i8080/)
 - CPM22.ASM and CBIOS.ASM were found 
 [here](http://maben.homeip.net/static/S100/software/DRI/sourcecode/CPM22/),
-and compiled with [asm8080](http://sourceforge.net/projects/asm8080/)
-- blank.cpm was created with
-```
-tr \\000 \\345 </dev/zero | dd  of=foo.cpm count=256256 bs=1
-```
-- populate images with [cpmtools](http://www.moria.de/~michael/cpmtools/)
+and compile using [asm8080](http://sourceforge.net/projects/asm8080/)
+- create own images with ```make blank``` and populate with
+[cpmtools](http://www.moria.de/~michael/cpmtools/)
 
 Other useful CP/M links:
 - http://www.retrotechnology.com/dri/howto_cpm.html
