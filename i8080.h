@@ -5,7 +5,7 @@
 
 class i8080: public CPU {
 public:
-	i8080(Memory &, jmp_buf *, CPU::statfn, PortDevice &);
+	i8080(Memory &, jmp_buf *, CPU::statfn, PortDevice<i8080> &);
 
 	void run(unsigned);
 	void reset();
@@ -55,7 +55,7 @@ private:
 		byte SR;
 	};
 	int _irq_pending;
-	PortDevice *_ports;
+	PortDevice<i8080> *_ports;
 
 	typedef void (i8080::*OP)(); 
 	OP _ops[256];
