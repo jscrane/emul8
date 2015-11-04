@@ -10,12 +10,15 @@
 			flags.I, flags.H, flags._, flags.P, flags.__, flags.C
 
 void z80::step() {
+	_mc(PC, 4);
 	byte op = _mem[PC];
+	printf("%5d MR %04x %02x\n", _ts, PC, op);
 #if defined(CPU_DEBUG)
 	if (_debug)
 		_status(CPU_STATE_FMT);
 #endif
 	PC++;
+	R++;
 	(this->*_ops[op])();
 }
 
@@ -31,10 +34,12 @@ void z80::run(unsigned clocks) {
 }
 
 void z80::reset() {
-	A = 0;
-	_sr(0);
-	BC = DE = HL = PC = SP = 0;
+	AF = BC = DE = HL = PC = SP = 0;
+	AF_ = BC_ = DE_ = HL_ = IX = IY = 0;
+	I = R = 0;
 	_irq_pending = 0;
+	_ts = 0;
+	_halted = false;
 }
 
 void z80::raise(int level) {
@@ -72,9 +77,31 @@ void z80::daa() {
 	flags.C = c;
 }
 
-void z80::hlt() {
+/* FIXME?
+void z80::halt() {
 	_status("CPU halted at %04x\r\n%s", (PC-1), status());
 	longjmp(*_err, 1);
+}
+*/
+
+void z80::cb() {
+	// FIXME
+	halt();
+}
+
+void z80::dd() {
+	// FIXME
+	halt();
+}
+
+void z80::ed() {
+	// FIXME
+	halt();
+}
+
+void z80::fd() {
+	// FIXME
+	halt();
 }
 
 int z80::parity_table[] = {
@@ -96,170 +123,170 @@ int z80::parity_table[] = {
 	1, 0, 0, 1, 0, 1, 1, 0, 0, 1, 1, 0, 1, 0, 0, 1,
 };
 
-z80::i8080(Memory &m, jmp_buf *jb, CPU::statfn s, PortDevice &d): CPU(m, jb, s)
+z80::z80(Memory &m, jmp_buf *jb, CPU::statfn s, PortDevice<z80> &d): CPU(m, jb, s)
 {
 	_ports = &d;
 	_debug = false;
 
 	OP *p = _ops;
 
-	// 0x
-	*p++ = &z80::nop; *p++ = &z80::lxib; 
-	*p++ = &z80::staxb; *p++ = &z80::inxb;
-	*p++ = &z80::inrb; *p++ = &z80::dcrb;
-	*p++ = &z80::mvib; *p++ = &z80::rlc;
-	*p++ = &z80::nop; *p++ = &z80::dadb;
-	*p++ = &z80::ldaxb; *p++ = &z80::dcxb;
-	*p++ = &z80::inrc; *p++ = &z80::dcrc;
-	*p++ = &z80::mvic; *p++ = &z80::rrc;
+	// 0x00
+	*p++ = &z80::nop; *p++ = &z80::ldbcpc; 
+	*p++ = &z80::ldBCa; *p++ = &z80::incbc;
+	*p++ = &z80::incb; *p++ = &z80::decb;
+	*p++ = &z80::ldb; *p++ = &z80::rlca;
+	*p++ = &z80::exaf; *p++ = &z80::addhlbc;
+	*p++ = &z80::ldaBC; *p++ = &z80::decbc;
+	*p++ = &z80::incc; *p++ = &z80::decc;
+	*p++ = &z80::ldc; *p++ = &z80::rrca;
 
-	// 1x
-	*p++ = &z80::nop; *p++ = &z80::lxid; 
-	*p++ = &z80::staxd; *p++ = &z80::inxd;
-	*p++ = &z80::inrd; *p++ = &z80::dcrd;
-	*p++ = &z80::mvid; *p++ = &z80::ral;
-	*p++ = &z80::nop; *p++ = &z80::dadd;
-	*p++ = &z80::ldaxd; *p++ = &z80::dcxd;
-	*p++ = &z80::inre; *p++ = &z80::dcre;
-	*p++ = &z80::mvie; *p++ = &z80::rar;
+	// 0x10
+	*p++ = &z80::djnz; *p++ = &z80::lddepc; 
+	*p++ = &z80::ldDEa; *p++ = &z80::incde;
+	*p++ = &z80::incd; *p++ = &z80::decd;
+	*p++ = &z80::ldd; *p++ = &z80::rla;
+	*p++ = &z80::jr; *p++ = &z80::addhlde;
+	*p++ = &z80::ldaDE; *p++ = &z80::decde;
+	*p++ = &z80::ince; *p++ = &z80::dece;
+	*p++ = &z80::lde; *p++ = &z80::rra;
 
-	// 2x
-	*p++ = &z80::nop; *p++ = &z80::lxih;
-	*p++ = &z80::shld; *p++ = &z80::inxh;
-	*p++ = &z80::inrh; *p++ = &z80::dcrh;
-	*p++ = &z80::mvih; *p++ = &z80::daa;
-	*p++ = &z80::nop; *p++ = &z80::dadh; 
-	*p++ = &z80::lhld; *p++ = &z80::dcxh; 
-	*p++ = &z80::inrl; *p++ = &z80::dcrl; 
-	*p++ = &z80::mvil; *p++ = &z80::cma; 
+	// 0x20
+	*p++ = &z80::jrnz; *p++ = &z80::ldhlpc;
+	*p++ = &z80::ldPChl; *p++ = &z80::inchl;
+	*p++ = &z80::inch; *p++ = &z80::dech;
+	*p++ = &z80::ldh; *p++ = &z80::daa;
+	*p++ = &z80::jrz; *p++ = &z80::addhlhl; 
+	*p++ = &z80::ldhlPC; *p++ = &z80::dechl; 
+	*p++ = &z80::incl; *p++ = &z80::decl; 
+	*p++ = &z80::ldl; *p++ = &z80::cpl; 
 
-	// 3x
-	*p++ = &z80::nop; *p++ = &z80::lxisp;
-	*p++ = &z80::sta; *p++ = &z80::inxsp;
-	*p++ = &z80::inrm; *p++ = &z80::dcrm;
-	*p++ = &z80::mvim; *p++ = &z80::stc;
-	*p++ = &z80::nop; *p++ = &z80::dadsp;
-	*p++ = &z80::lda; *p++ = &z80::dcxsp;
-	*p++ = &z80::inra; *p++ = &z80::dcra;
-	*p++ = &z80::mvia; *p++ = &z80::cmc;
+	// 0x30
+	*p++ = &z80::jrnc; *p++ = &z80::ldsppc;
+	*p++ = &z80::ldPCa; *p++ = &z80::incsp;
+	*p++ = &z80::incHL; *p++ = &z80::decHL;
+	*p++ = &z80::ldHL; *p++ = &z80::scf;
+	*p++ = &z80::jrc; *p++ = &z80::addhlsp;
+	*p++ = &z80::ldaPC; *p++ = &z80::decsp;
+	*p++ = &z80::inca; *p++ = &z80::deca;
+	*p++ = &z80::lda; *p++ = &z80::ccf;
 
-	// 4x
-	*p++ = &z80::movbb; *p++ = &z80::movbc;
-	*p++ = &z80::movbd; *p++ = &z80::movbe;
-	*p++ = &z80::movbh; *p++ = &z80::movbl;
-	*p++ = &z80::movbm; *p++ = &z80::movba;
-	*p++ = &z80::movcb; *p++ = &z80::movcc;
-	*p++ = &z80::movcd; *p++ = &z80::movce;
-	*p++ = &z80::movch; *p++ = &z80::movcl;
-	*p++ = &z80::movcm; *p++ = &z80::movca;
+	// 0x40
+	*p++ = &z80::ldbb; *p++ = &z80::ldbc;
+	*p++ = &z80::ldbd; *p++ = &z80::ldbe;
+	*p++ = &z80::ldbh; *p++ = &z80::ldbl;
+	*p++ = &z80::ldbHL; *p++ = &z80::ldba;
+	*p++ = &z80::ldcb; *p++ = &z80::ldcc;
+	*p++ = &z80::ldcd; *p++ = &z80::ldce;
+	*p++ = &z80::ldch; *p++ = &z80::ldcl;
+	*p++ = &z80::ldcHL; *p++ = &z80::ldca;
 
-	// 5x
-	*p++ = &z80::movdb; *p++ = &z80::movdc;
-	*p++ = &z80::movdd; *p++ = &z80::movde;
-	*p++ = &z80::movdh; *p++ = &z80::movdl;
-	*p++ = &z80::movdm; *p++ = &z80::movda;
-	*p++ = &z80::moveb; *p++ = &z80::movec;
-	*p++ = &z80::moved; *p++ = &z80::movee;
-	*p++ = &z80::moveh; *p++ = &z80::movel;
-	*p++ = &z80::movem; *p++ = &z80::movea;
+	// 0x50
+	*p++ = &z80::lddb; *p++ = &z80::lddc;
+	*p++ = &z80::lddd; *p++ = &z80::ldde;
+	*p++ = &z80::lddh; *p++ = &z80::lddl;
+	*p++ = &z80::lddHL; *p++ = &z80::ldda;
+	*p++ = &z80::ldeb; *p++ = &z80::ldec;
+	*p++ = &z80::lded; *p++ = &z80::ldee;
+	*p++ = &z80::ldeh; *p++ = &z80::ldel;
+	*p++ = &z80::ldeHL; *p++ = &z80::ldea;
 
-	// 6x
-	*p++ = &z80::movhb; *p++ = &z80::movhc;
-	*p++ = &z80::movhd; *p++ = &z80::movhe;
-	*p++ = &z80::movhh; *p++ = &z80::movhl;
-	*p++ = &z80::movhm; *p++ = &z80::movha;
-	*p++ = &z80::movlb; *p++ = &z80::movlc;
-	*p++ = &z80::movld; *p++ = &z80::movle;
-	*p++ = &z80::movlh; *p++ = &z80::movll;
-	*p++ = &z80::movlm; *p++ = &z80::movla;
+	// 0x60
+	*p++ = &z80::ldhb; *p++ = &z80::ldhc;
+	*p++ = &z80::ldhd; *p++ = &z80::ldhe;
+	*p++ = &z80::ldhh; *p++ = &z80::ldhl;
+	*p++ = &z80::ldhHL; *p++ = &z80::ldha;
+	*p++ = &z80::ldlb; *p++ = &z80::ldlc;
+	*p++ = &z80::ldld; *p++ = &z80::ldle;
+	*p++ = &z80::ldlh; *p++ = &z80::ldll;
+	*p++ = &z80::ldlHL; *p++ = &z80::ldla;
 
-	// 7x
-	*p++ = &z80::movmb; *p++ = &z80::movmc;
-	*p++ = &z80::movmd; *p++ = &z80::movme;
-	*p++ = &z80::movmh; *p++ = &z80::movml;
-	*p++ = &z80::hlt; *p++ = &z80::movma;
-	*p++ = &z80::movab; *p++ = &z80::movac;
-	*p++ = &z80::movad; *p++ = &z80::movae;
-	*p++ = &z80::movah; *p++ = &z80::moval;
-	*p++ = &z80::movam; *p++ = &z80::movaa;
+	// 0x70
+	*p++ = &z80::ldHLb; *p++ = &z80::ldHLc;
+	*p++ = &z80::ldHLd; *p++ = &z80::ldHLe;
+	*p++ = &z80::ldHLh; *p++ = &z80::ldHLl;
+	*p++ = &z80::halt; *p++ = &z80::ldHLa;
+	*p++ = &z80::ldab; *p++ = &z80::ldac;
+	*p++ = &z80::ldad; *p++ = &z80::ldae;
+	*p++ = &z80::ldah; *p++ = &z80::ldal;
+	*p++ = &z80::ldaHL; *p++ = &z80::ldaa;
 
-	// 8x
-	*p++ = &z80::addb; *p++ = &z80::addc;
-	*p++ = &z80::addd; *p++ = &z80::adde;
-	*p++ = &z80::addh; *p++ = &z80::addl;
-	*p++ = &z80::addm; *p++ = &z80::adda;
-	*p++ = &z80::adcb; *p++ = &z80::adcc;
-	*p++ = &z80::adcd; *p++ = &z80::adce;
-	*p++ = &z80::adch; *p++ = &z80::adcl;
-	*p++ = &z80::adcm; *p++ = &z80::adca;
+	// 0x80
+	*p++ = &z80::addab; *p++ = &z80::addac;
+	*p++ = &z80::addad; *p++ = &z80::addae;
+	*p++ = &z80::addah; *p++ = &z80::addal;
+	*p++ = &z80::addaHL; *p++ = &z80::addaa;
+	*p++ = &z80::adcab; *p++ = &z80::adcac;
+	*p++ = &z80::adcad; *p++ = &z80::adcae;
+	*p++ = &z80::adcah; *p++ = &z80::adcal;
+	*p++ = &z80::adcaHL; *p++ = &z80::adcaa;
 
-	// 9x
-	*p++ = &z80::subb; *p++ = &z80::subc;
-	*p++ = &z80::subd; *p++ = &z80::sube;
-	*p++ = &z80::subh; *p++ = &z80::subl;
-	*p++ = &z80::subm; *p++ = &z80::suba;
-	*p++ = &z80::sbbb; *p++ = &z80::sbbc;
-	*p++ = &z80::sbbd; *p++ = &z80::sbbe;
-	*p++ = &z80::sbbh; *p++ = &z80::sbbl;
-	*p++ = &z80::sbbm; *p++ = &z80::sbba;
+	// 0x90
+	*p++ = &z80::subab; *p++ = &z80::subac;
+	*p++ = &z80::subad; *p++ = &z80::subae;
+	*p++ = &z80::subah; *p++ = &z80::subal;
+	*p++ = &z80::subaHL; *p++ = &z80::subaa;
+	*p++ = &z80::sbcab; *p++ = &z80::sbcac;
+	*p++ = &z80::sbcad; *p++ = &z80::sbcae;
+	*p++ = &z80::sbcah; *p++ = &z80::sbcal;
+	*p++ = &z80::sbcaHL; *p++ = &z80::sbcaa;
 
-	// Ax
-	*p++ = &z80::anab; *p++ = &z80::anac;
-	*p++ = &z80::anad; *p++ = &z80::anae;
-	*p++ = &z80::anah; *p++ = &z80::anal;
-	*p++ = &z80::anam; *p++ = &z80::anaa;
-	*p++ = &z80::xrab; *p++ = &z80::xrac;
-	*p++ = &z80::xrad; *p++ = &z80::xrae;
-	*p++ = &z80::xrah; *p++ = &z80::xral;
-	*p++ = &z80::xram; *p++ = &z80::xraa;
+	// 0xa0
+	*p++ = &z80::andb; *p++ = &z80::andc;
+	*p++ = &z80::andd; *p++ = &z80::ande;
+	*p++ = &z80::andh; *p++ = &z80::andl;
+	*p++ = &z80::andHL; *p++ = &z80::anda;
+	*p++ = &z80::xorb; *p++ = &z80::xorc;
+	*p++ = &z80::xord; *p++ = &z80::xore;
+	*p++ = &z80::xorh; *p++ = &z80::xorl;
+	*p++ = &z80::xorHL; *p++ = &z80::xora;
 
-	// Bx
-	*p++ = &z80::orab; *p++ = &z80::orac;
-	*p++ = &z80::orad; *p++ = &z80::orae;
-	*p++ = &z80::orah; *p++ = &z80::oral;
-	*p++ = &z80::oram; *p++ = &z80::oraa;
-	*p++ = &z80::cmpb; *p++ = &z80::cmpc;
-	*p++ = &z80::cmpd; *p++ = &z80::cmpe;
-	*p++ = &z80::cmph; *p++ = &z80::cmpl;
-	*p++ = &z80::cmpm; *p++ = &z80::cmpa;
+	// 0xb0
+	*p++ = &z80::orb; *p++ = &z80::orc;
+	*p++ = &z80::ord; *p++ = &z80::ore;
+	*p++ = &z80::orh; *p++ = &z80::orl;
+	*p++ = &z80::orHL; *p++ = &z80::ora;
+	*p++ = &z80::cpb; *p++ = &z80::cpc;
+	*p++ = &z80::cpd; *p++ = &z80::cpe;
+	*p++ = &z80::cph; *p++ = &z80::cpL;
+	*p++ = &z80::cpHL; *p++ = &z80::cpa;
 
-	// Cx
-	*p++ = &z80::rnz; *p++ = &z80::popb;
-	*p++ = &z80::jnz; *p++ = &z80::jmp;
-	*p++ = &z80::cnz; *p++ = &z80::pushb;
-	*p++ = &z80::adi; *p++ = &z80::rst0;
-	*p++ = &z80::rz; *p++ = &z80::ret;
-	*p++ = &z80::jz; *p++ = &z80::jmp;
-	*p++ = &z80::cz; *p++ = &z80::call;
-	*p++ = &z80::aci; *p++ = &z80::rst1;
+	// 0xc0
+	*p++ = &z80::retnz; *p++ = &z80::popbc;
+	*p++ = &z80::jpnz; *p++ = &z80::jp;
+	*p++ = &z80::callnz; *p++ = &z80::pushbc;
+	*p++ = &z80::adda; *p++ = &z80::rst00;
+	*p++ = &z80::retz; *p++ = &z80::ret;
+	*p++ = &z80::jpz; *p++ = &z80::cb;
+	*p++ = &z80::callz; *p++ = &z80::call;
+	*p++ = &z80::adca; *p++ = &z80::rst08;
 
-	// Dx
-	*p++ = &z80::rnc; *p++ = &z80::popd;
-	*p++ = &z80::jnc; *p++ = &z80::out;
-	*p++ = &z80::cnc; *p++ = &z80::pushd;
-	*p++ = &z80::sui; *p++ = &z80::rst2;
-	*p++ = &z80::rc; *p++ = &z80::ret;
-	*p++ = &z80::jc; *p++ = &z80::in;
-	*p++ = &z80::cc; *p++ = &z80::call;
-	*p++ = &z80::sbi; *p++ = &z80::rst3;
+	// 0xd0
+	*p++ = &z80::retnc; *p++ = &z80::popde;
+	*p++ = &z80::jpnc; *p++ = &z80::outa;
+	*p++ = &z80::callnc; *p++ = &z80::pushde;
+	*p++ = &z80::suba; *p++ = &z80::rst10;
+	*p++ = &z80::retc; *p++ = &z80::exx;
+	*p++ = &z80::jpc; *p++ = &z80::ina;
+	*p++ = &z80::callc; *p++ = &z80::dd;
+	*p++ = &z80::sbca; *p++ = &z80::rst18;
 
-	// Ex
-	*p++ = &z80::rpo; *p++ = &z80::poph;
-	*p++ = &z80::jpo; *p++ = &z80::xthl;
-	*p++ = &z80::cpo; *p++ = &z80::pushh;
-	*p++ = &z80::ani; *p++ = &z80::rst4;
-	*p++ = &z80::rpe; *p++ = &z80::pchl;
-	*p++ = &z80::jpe; *p++ = &z80::xchg;
-	*p++ = &z80::cpe; *p++ = &z80::call;
-	*p++ = &z80::xri; *p++ = &z80::rst5;
+	// 0xe0
+	*p++ = &z80::retpo; *p++ = &z80::pophl;
+	*p++ = &z80::jppo; *p++ = &z80::exSPhl;
+	*p++ = &z80::callpo; *p++ = &z80::pushhl;
+	*p++ = &z80::and; *p++ = &z80::rst20;
+	*p++ = &z80::retpe; *p++ = &z80::jphl;
+	*p++ = &z80::jppe; *p++ = &z80::exdehl;
+	*p++ = &z80::callpe; *p++ = &z80::ed;
+	*p++ = &z80::xor; *p++ = &z80::rst28;
 
-	// Fx
-	*p++ = &z80::rp; *p++ = &z80::pop;
-	*p++ = &z80::jp; *p++ = &z80::di;
-	*p++ = &z80::cp; *p++ = &z80::push;
-	*p++ = &z80::ori; *p++ = &z80::rst6;
-	*p++ = &z80::rm; *p++ = &z80::sphl;
-	*p++ = &z80::jm; *p++ = &z80::ei;
-	*p++ = &z80::cm; *p++ = &z80::call;
-	*p++ = &z80::cpi; *p++ = &z80::rst7;
+	// 0xf0
+	*p++ = &z80::retp; *p++ = &z80::popaf;
+	*p++ = &z80::jpp; *p++ = &z80::di;
+	*p++ = &z80::callp; *p++ = &z80::pushaf;
+	*p++ = &z80::or; *p++ = &z80::rst30;
+	*p++ = &z80::retm; *p++ = &z80::ldsphl;
+	*p++ = &z80::jpm; *p++ = &z80::ei;
+	*p++ = &z80::callm; *p++ = &z80::fd;
+	*p++ = &z80::cp; *p++ = &z80::rst38;
 }
