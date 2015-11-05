@@ -60,7 +60,7 @@ private:
 			union {
 				struct __attribute__((packed)) {
 					unsigned C:1;
-					unsigned __:1;	// always 1
+					unsigned N:1;
 					unsigned P:1;
 					unsigned _:1;	// always 0
 					unsigned H:1;
@@ -140,9 +140,13 @@ private:
 		_sb(a, w & 0xff);
 	}
 
-	inline void _szp(byte r) {
+	inline void _sz(byte r) {
 		flags.S = ((r & 0x80) != 0);
 		flags.Z = (r == 0);
+	}
+
+	inline void _szp(byte r) {
+		_sz(r);
 		flags.P = parity_table[r];
 	}
 
@@ -154,14 +158,20 @@ private:
 	inline void _inc(byte &b) {
 		word w = b + 1;
 		byte r = w & 0xff;
-		_szhp(b, r);
+		_sz(r);
+		flags.P = r == 0x80;
+		flags.N = 0;
+		flags.H = !(r & 0x0f);
 		b = r;
 	}
 
 	inline void _dec(byte &b) {
 		word w = b - 1;
 		byte r = w & 0xff;
-		_szhp(b, r);
+		_sz(r);
+		flags.P = r == 0x7f;
+		flags.N = 1;
+		flags.H = !(b & 0x0f);
 		b = r;
 	}
 
@@ -249,7 +259,7 @@ private:
 	void incl() { _inc(L); }
 	void decl() { _dec(L); }
 	void ldl() { L = _rb(PC++); }
-	void cpl() { A = ~A; }
+	void cpl() { A = ~A; flags.H = flags.N = 1; }
 
 	// 0x30
 	void jrnc() { _jr(!flags.C); }
@@ -259,7 +269,7 @@ private:
 	void incHL() { byte b = _rb(HL); _mc(HL, 1); _inc(b); _sb(HL, b); }
 	void decHL() { byte b = _rb(HL); _mc(HL, 1); _dec(b); _sb(HL, b); }
 	void ldHL() { _sb(HL, _rb(PC++)); }
-	void scf() { flags.C = 1; }
+	void scf() { flags.C = 1; flags.N = flags.H = 0; }
 
 	// 0x38
 	void jrc() { _jr(flags.C); }
@@ -269,7 +279,7 @@ private:
 	void inca() { _inc(A); }
 	void deca() { _dec(A); }
 	void lda() { A = _rb(PC++); }
-	void ccf() { flags.C = !flags.C; }
+	void ccf() { flags.C = !flags.C; flags.N = 0; }
 
 	// 0x40
 	void ldbb() {}
@@ -356,8 +366,12 @@ private:
 		word w = A + x;
 		byte b = A;
 		A = w & 0xff;
-		_szhp(b, A);
+		_sz(A);
 		flags.C = w > 0xff;
+		flags.N = 0;
+		byte v = b ^ A ^ x;
+		flags.P = (v >> 7) ^ flags.C;
+		flags.H = (v >> 4) & 1;
 	}
 	void addab() { _add(B); }
 	void addac() { _add(C); }
@@ -373,8 +387,12 @@ private:
 		word w = A + x + flags.C;
 		byte b = A;
 		A = w & 0xff;
-		_szhp(b, A);
+		_sz(A);
 		flags.C = w > 0xff;
+		flags.N = 0;
+		byte v = b ^ A ^ x;
+		flags.P = (v >> 7) ^ flags.C;
+		flags.H = (v >> 4) & 1;
 	}
 	void adcab() { _adc(B); }
 	void adcac() { _adc(C); }
@@ -387,11 +405,12 @@ private:
 
 	// 0x90
 	inline void _sub(byte x) {
-		word w = A - x;
 		byte b = A;
-		A = w & 0xff;
-		_szhp(b, A);
-		flags.C = w > 0xff;
+		flags.C = !flags.C;
+		_adc(~x);
+		flags.C = !flags.C;
+		flags.N = 1;
+		flags.H = (b & 0x0f) < (x & 0x0f);
 	}
 	void subab() { _sub(B); }
 	void subac() { _sub(C); }
@@ -404,11 +423,12 @@ private:
 
 	// 0x98
 	inline void _sbc(byte x) {
-		word w = A - x - flags.C;
 		byte b = A;
-		A = w & 0xff;
-		_szhp(b, A);
-		flags.C = w > 0xff;
+		flags.C = !flags.C;
+		_adc(~x);
+		flags.C = !flags.C;
+		flags.N = 1;
+		flags.H = (b & 0x0f) < (x & 0x0f);
 	}
 	void sbcab() { _sbc(B); }
 	void sbcac() { _sbc(C); }
@@ -421,11 +441,10 @@ private:
 
 	// 0xa0
 	inline void _and(byte b) {
-		flags.H = ((A | b) & 0x08) != 0;
-		A = A & b;
+		A &= b;
 		_szp(A);
-//		flags.C = flags.H = 0;
-		flags.C = 0;
+		flags.C = flags.N = 0;
+		flags.H = 1;
 	}
 	void andb() { _and(B); }
 	void andc() { _and(C); }
@@ -438,9 +457,9 @@ private:
 
 	// 0xa8
 	inline void _xor(byte b) {
-		A = A ^ b;
+		A ^= b;
 		_szp(A);
-		flags.C = flags.H = 0;
+		flags.C = flags.N = flags.H = 0;
 	}
 	void xorb() { _xor(B); }
 	void xorc() { _xor(C); }
@@ -453,9 +472,9 @@ private:
 
 	// 0xb0
 	inline void _or(byte b) {
-		A = A | b;
+		A |= b;
 		_szp(A);
-		flags.C = flags.H = 0;
+		flags.C = flags.N = flags.H = 0;
 	}
 	void orb() { _or(B); }
 	void orc() { _or(C); }
@@ -468,9 +487,14 @@ private:
 
 	// 0xb8
 	inline void _cmp(byte b) {
+/*
 		word w = A - b;
 		_szhp(b, w & 0xff);
 		flags.C = w > 0xff;
+*/
+		byte a = A;
+		_sub(b);
+		A = a;
 	}
 	void cpb() { _cmp(B); }
 	void cpc() { _cmp(C); }
@@ -543,8 +567,7 @@ private:
 
 	// 0xf0
 	void retp() { _ret(!flags.S); }
-	// FIXME: check if setting flags is necessary...
-	void popaf() { AF = _pop(); flags._ = 0; flags.__ = 1; }
+	void popaf() { AF = _pop(); }
 	void jpp() { _jmp(!flags.S); }
 	void di() { flags.I = 0; }
 	void callp() { _call(!flags.S); }
