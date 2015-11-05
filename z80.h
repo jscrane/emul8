@@ -150,11 +150,6 @@ private:
 		flags.P = parity_table[r];
 	}
 
-	inline void _szhp(byte b, byte r) {
-		_szp(r);
-		flags.H = ((b & 0x0f) > (r & 0x0f));
-	}
-
 	inline void _inc(byte &b) {
 		word w = b + 1;
 		byte r = w & 0xff;
@@ -181,6 +176,7 @@ private:
 		unsigned long r = HL + w;
 		HL = (r & 0xffff);
 		flags.C = (r > 0xffff);
+		flags.H = 1;
 	}
 
 	inline void _exch(word &a, word &b) { word t = b; b = a; a = t; }
@@ -487,11 +483,6 @@ private:
 
 	// 0xb8
 	inline void _cmp(byte b) {
-/*
-		word w = A - b;
-		_szhp(b, w & 0xff);
-		flags.C = w > 0xff;
-*/
 		byte a = A;
 		_sub(b);
 		A = a;
