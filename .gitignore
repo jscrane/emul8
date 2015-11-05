@@ -1,4 +1,6 @@
 *.o
 .depend
 i686-Linux
+x86_64-Linux
 *.swp
+*/test
