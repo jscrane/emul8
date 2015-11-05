@@ -12,10 +12,8 @@
 void z80::step() {
 	_mc(PC, 4);
 	byte op = _mem[PC];
-	printf("%5d MR %04x %02x\n", _ts, PC, op);
 #if defined(CPU_DEBUG)
-	if (_debug)
-		_status(CPU_STATE_FMT);
+	printf("%5d MR %04x %02x\n", _ts, PC, op);
 #endif
 	PC++;
 	R++;
@@ -23,12 +21,6 @@ void z80::step() {
 }
 
 void z80::run(unsigned clocks) {
-#if defined(CPU_DEBUG)
-	if (_debug) {
-		step();
-		return;
-	}
-#endif
 	while (clocks--)
 		step();
 }
@@ -89,8 +81,14 @@ void z80::halt() {
 */
 
 void z80::cb() {
-	// FIXME
-	halt();
+	_mc(PC, 4);
+	byte op = _mem[PC];
+#if defined(CPU_DEBUG)
+	printf("%5d MR %04x %02x\n", _ts, PC, op);
+#endif
+	PC++;
+	R++;
+	(this->*_cb[op])();
 }
 
 void z80::dd() {
@@ -293,4 +291,166 @@ z80::z80(Memory &m, jmp_buf *jb, CPU::statfn s, PortDevice<z80> &d): CPU(m, jb, 
 	*p++ = &z80::jpm; *p++ = &z80::ei;
 	*p++ = &z80::callm; *p++ = &z80::fd;
 	*p++ = &z80::cp; *p++ = &z80::rst38;
+
+	OP *c = _cb;
+
+	// 0x00
+	*c++ = &z80::rlcB; *c++ = &z80::rlcC;
+	*c++ = &z80::rlcD; *c++ = &z80::rlcE;
+	*c++ = &z80::rlcH; *c++ = &z80::rlcL;
+	*c++ = &z80::rlcHL; *c++ = &z80::rlcA;
+	*c++ = &z80::rrcB; *c++ = &z80::rrcC;
+	*c++ = &z80::rrcD; *c++ = &z80::rrcE;
+	*c++ = &z80::rrcH; *c++ = &z80::rrcL;
+	*c++ = &z80::rrcHL; *c++ = &z80::rrcA;
+
+	// 0x10
+	*c++ = &z80::rlB; *c++ = &z80::rlC;
+	*c++ = &z80::rlD; *c++ = &z80::rlE;
+	*c++ = &z80::rlH; *c++ = &z80::rlL;
+	*c++ = &z80::rlHL; *c++ = &z80::rlA;
+	*c++ = &z80::rrB; *c++ = &z80::rrC;
+	*c++ = &z80::rrD; *c++ = &z80::rrE;
+	*c++ = &z80::rrH; *c++ = &z80::rrL;
+	*c++ = &z80::rrHL; *c++ = &z80::rrA;
+
+	// 0x20
+	*c++ = &z80::slab; *c++ = &z80::slac;
+	*c++ = &z80::slad; *c++ = &z80::slae;
+	*c++ = &z80::slah; *c++ = &z80::slal;
+	*c++ = &z80::slaHL; *c++ = &z80::slaa;
+	*c++ = &z80::srab; *c++ = &z80::srac;
+	*c++ = &z80::srad; *c++ = &z80::srae;
+	*c++ = &z80::srah; *c++ = &z80::sral;
+	*c++ = &z80::sraHL; *c++ = &z80::sraa;
+
+	// 0x30
+	*c++ = &z80::sllb; *c++ = &z80::sllc;
+	*c++ = &z80::slld; *c++ = &z80::slle;
+	*c++ = &z80::sllh; *c++ = &z80::slll;
+	*c++ = &z80::sllHL; *c++ = &z80::slla;
+	*c++ = &z80::srlb; *c++ = &z80::srlc;
+	*c++ = &z80::srld; *c++ = &z80::srle;
+	*c++ = &z80::srlh; *c++ = &z80::srll;
+	*c++ = &z80::srlHL; *c++ = &z80::srla;
+
+	// 0x40
+	*c++ = &z80::bit0b; *c++ = &z80::bit0c;
+	*c++ = &z80::bit0d; *c++ = &z80::bit0e;
+	*c++ = &z80::bit0h; *c++ = &z80::bit0l;
+	*c++ = &z80::bit0HL; *c++ = &z80::bit0a;
+	*c++ = &z80::bit1b; *c++ = &z80::bit1c;
+	*c++ = &z80::bit1d; *c++ = &z80::bit1e;
+	*c++ = &z80::bit1h; *c++ = &z80::bit1l;
+	*c++ = &z80::bit1HL; *c++ = &z80::bit1a;
+
+	// 0x50
+	*c++ = &z80::bit2b; *c++ = &z80::bit2c;
+	*c++ = &z80::bit2d; *c++ = &z80::bit2e;
+	*c++ = &z80::bit2h; *c++ = &z80::bit2l;
+	*c++ = &z80::bit2HL; *c++ = &z80::bit2a;
+	*c++ = &z80::bit3b; *c++ = &z80::bit3c;
+	*c++ = &z80::bit3d; *c++ = &z80::bit3e;
+	*c++ = &z80::bit3h; *c++ = &z80::bit3l;
+	*c++ = &z80::bit3HL; *c++ = &z80::bit3a;
+
+	// 0x60
+	*c++ = &z80::bit4b; *c++ = &z80::bit4c;
+	*c++ = &z80::bit4d; *c++ = &z80::bit4e;
+	*c++ = &z80::bit4h; *c++ = &z80::bit4l;
+	*c++ = &z80::bit4HL; *c++ = &z80::bit4a;
+	*c++ = &z80::bit5b; *c++ = &z80::bit5c;
+	*c++ = &z80::bit5d; *c++ = &z80::bit5e;
+	*c++ = &z80::bit5h; *c++ = &z80::bit5l;
+	*c++ = &z80::bit5HL; *c++ = &z80::bit5a;
+
+	// 0x70
+	*c++ = &z80::bit6b; *c++ = &z80::bit6c;
+	*c++ = &z80::bit6d; *c++ = &z80::bit6e;
+	*c++ = &z80::bit6h; *c++ = &z80::bit6l;
+	*c++ = &z80::bit6HL; *c++ = &z80::bit6a;
+	*c++ = &z80::bit7b; *c++ = &z80::bit7c;
+	*c++ = &z80::bit7d; *c++ = &z80::bit7e;
+	*c++ = &z80::bit7h; *c++ = &z80::bit7l;
+	*c++ = &z80::bit7HL; *c++ = &z80::bit7a;
+
+	// 0x80
+	*c++ = &z80::res0b; *c++ = &z80::res0c;
+	*c++ = &z80::res0d; *c++ = &z80::res0e;
+	*c++ = &z80::res0h; *c++ = &z80::res0l;
+	*c++ = &z80::res0HL; *c++ = &z80::res0a;
+	*c++ = &z80::res1b; *c++ = &z80::res1c;
+	*c++ = &z80::res1d; *c++ = &z80::res1e;
+	*c++ = &z80::res1h; *c++ = &z80::res1l;
+	*c++ = &z80::res1HL; *c++ = &z80::res1a;
+
+	// 0x90
+	*c++ = &z80::res2b; *c++ = &z80::res2c;
+	*c++ = &z80::res2d; *c++ = &z80::res2e;
+	*c++ = &z80::res2h; *c++ = &z80::res2l;
+	*c++ = &z80::res2HL; *c++ = &z80::res2a;
+	*c++ = &z80::res3b; *c++ = &z80::res3c;
+	*c++ = &z80::res3d; *c++ = &z80::res3e;
+	*c++ = &z80::res3h; *c++ = &z80::res3l;
+	*c++ = &z80::res3HL; *c++ = &z80::res3a;
+
+	// 0xa0
+	*c++ = &z80::res4b; *c++ = &z80::res4c;
+	*c++ = &z80::res4d; *c++ = &z80::res4e;
+	*c++ = &z80::res4h; *c++ = &z80::res4l;
+	*c++ = &z80::res4HL; *c++ = &z80::res4a;
+	*c++ = &z80::res5b; *c++ = &z80::res5c;
+	*c++ = &z80::res5d; *c++ = &z80::res5e;
+	*c++ = &z80::res5h; *c++ = &z80::res5l;
+	*c++ = &z80::res5HL; *c++ = &z80::res5a;
+
+	// 0xb0
+	*c++ = &z80::res6b; *c++ = &z80::res6c;
+	*c++ = &z80::res6d; *c++ = &z80::res6e;
+	*c++ = &z80::res6h; *c++ = &z80::res6l;
+	*c++ = &z80::res6HL; *c++ = &z80::res6a;
+	*c++ = &z80::res7b; *c++ = &z80::res7c;
+	*c++ = &z80::res7d; *c++ = &z80::res7e;
+	*c++ = &z80::res7h; *c++ = &z80::res7l;
+	*c++ = &z80::res7HL; *c++ = &z80::res7a;
+
+	// 0xc0
+	*c++ = &z80::set0b; *c++ = &z80::set0c;
+	*c++ = &z80::set0d; *c++ = &z80::set0e;
+	*c++ = &z80::set0h; *c++ = &z80::set0l;
+	*c++ = &z80::set0HL; *c++ = &z80::set0a;
+	*c++ = &z80::set1b; *c++ = &z80::set1c;
+	*c++ = &z80::set1d; *c++ = &z80::set1e;
+	*c++ = &z80::set1h; *c++ = &z80::set1l;
+	*c++ = &z80::set1HL; *c++ = &z80::set1a;
+
+	// 0xd0
+	*c++ = &z80::set2b; *c++ = &z80::set2c;
+	*c++ = &z80::set2d; *c++ = &z80::set2e;
+	*c++ = &z80::set2h; *c++ = &z80::set2l;
+	*c++ = &z80::set2HL; *c++ = &z80::set2a;
+	*c++ = &z80::set3b; *c++ = &z80::set3c;
+	*c++ = &z80::set3d; *c++ = &z80::set3e;
+	*c++ = &z80::set3h; *c++ = &z80::set3l;
+	*c++ = &z80::set3HL; *c++ = &z80::set3a;
+
+	// 0xe0
+	*c++ = &z80::set4b; *c++ = &z80::set4c;
+	*c++ = &z80::set4d; *c++ = &z80::set4e;
+	*c++ = &z80::set4h; *c++ = &z80::set4l;
+	*c++ = &z80::set4HL; *c++ = &z80::set4a;
+	*c++ = &z80::set5b; *c++ = &z80::set5c;
+	*c++ = &z80::set5d; *c++ = &z80::set5e;
+	*c++ = &z80::set5h; *c++ = &z80::set5l;
+	*c++ = &z80::set5HL; *c++ = &z80::set5a;
+
+	// 0xf0
+	*c++ = &z80::set6b; *c++ = &z80::set6c;
+	*c++ = &z80::set6d; *c++ = &z80::set6e;
+	*c++ = &z80::set6h; *c++ = &z80::set6l;
+	*c++ = &z80::set6HL; *c++ = &z80::set6a;
+	*c++ = &z80::set7b; *c++ = &z80::set7c;
+	*c++ = &z80::set7d; *c++ = &z80::set7e;
+	*c++ = &z80::set7h; *c++ = &z80::set7l;
+	*c++ = &z80::set7HL; *c++ = &z80::set7a;
 }

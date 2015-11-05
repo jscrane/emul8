@@ -74,6 +74,8 @@ private:
 		};
 		word AF;
 	};
+	static const byte flag35 = (1 << 3) | (1 << 5);
+
 	union {
 		struct { byte C, B; };
 		word BC;
@@ -104,30 +106,43 @@ private:
 
 	typedef void (z80::*OP)(); 
 	OP _ops[256];
+	OP _cb[256];
 
 	static int parity_table[256];
 
 	inline byte _rb(Memory::address a) {
+#if defined(CPU_DEBUG)
 		printf("%5d MC %04x\n", _ts, a);
+#endif
 		ts(3);
+#if defined(CPU_DEBUG)
 		printf("%5d MR %04x %02x\n", _ts, a, (byte)_mem[a]);
+#endif
 		return _mem[a];
 	}
 
 	inline byte _sb(Memory::address a, byte b) {
+#if defined(CPU_DEBUG)
 		printf("%5d MC %04x\n", _ts, a);
+#endif
 		ts(3);
+#if defined(CPU_DEBUG)
 		printf("%5d MW %04x %02x\n", _ts, a, b);
+#endif
 		_mem[a] = b;
 	}
 
 	inline void _mc(Memory::address a, int i) {
+#if defined(CPU_DEBUG)
 		printf("%5d MC %04x\n", _ts, a);
+#endif
 		ts(i);
 	}
 
 	inline void _pc(byte port, int i) {
+#if defined(CPU_DEBUG)
 		printf("%5d PC %04x\n", _ts, port);
+#endif
 		ts(i);
 	}
 
@@ -148,6 +163,12 @@ private:
 	inline void _szp(byte r) {
 		_sz(r);
 		flags.P = parity_table[r];
+	}
+
+	inline void _szp35(byte r) {
+		_sz(r);
+		flags.P = parity_table[r];
+		F |= (r & flag35);
 	}
 
 	inline void _inc(byte &b) {
@@ -575,6 +596,404 @@ private:
 	void fd();
 	void cp() { _cmp(_rb(PC++)); }
 	void rst38() { _mc(IR, 1); _push(PC); PC = 0x38; }
+
+	// 0xCB extended instructions
+
+	// 0x00
+	inline void _rlc(byte &b) {
+		b = (b << 1) | (b >> 7);
+		flags.C = b & 0x01;
+		_szp35(b);
+	}
+
+	void rlcB() { _rlc(B); }
+	void rlcC() { _rlc(C); }
+	void rlcD() { _rlc(D); }
+	void rlcE() { _rlc(E); }
+	void rlcH() { _rlc(H); }
+	void rlcL() { _rlc(L); }
+	void rlcHL() { byte b = _rb(HL); _mc(HL, 1); _rlc(b); _sb(HL, b); }
+	void rlcA() { _rlc(A); }
+
+	// 0x08
+	inline void _rrc(byte &b) {
+		flags.C = b & 0x01;
+		b = (b >> 1) | (b << 7);
+		_szp35(b);
+	}
+
+	void rrcB() { _rrc(B); }
+	void rrcC() { _rrc(C); }
+	void rrcD() { _rrc(D); }
+	void rrcE() { _rrc(E); }
+	void rrcH() { _rrc(H); }
+	void rrcL() { _rrc(L); }
+	void rrcHL() { byte b = _rb(HL); _mc(HL, 1); _rrc(b); _sb(HL, b); }
+	void rrcA() { _rrc(A); }
+
+	// 0x10
+	inline void _rl(byte &b) {
+		byte a = b;
+		b = (b << 1) | flags.C;
+		flags.C = (a >> 7);
+		_szp35(b);
+	}
+
+	void rlB() { _rl(B); }
+	void rlC() { _rl(C); }
+	void rlD() { _rl(D); }
+	void rlE() { _rl(E); }
+	void rlH() { _rl(H); }
+	void rlL() { _rl(L); }
+	void rlHL() { byte b = _rb(HL); _mc(HL, 1); _rl(b); _sb(HL, b); }
+	void rlA() { _rl(A); }
+
+	// 0x18
+	inline void _rr(byte &b) {
+		byte a = b;
+		b >>= 1;
+		if (flags.C) b |= 0x80;
+		flags.C = a & 0x01;
+		_szp35(b);
+	}
+
+	void rrB() { _rr(B); }
+	void rrC() { _rr(C); }
+	void rrD() { _rr(D); }
+	void rrE() { _rr(E); }
+	void rrH() { _rr(H); }
+	void rrL() { _rr(L); }
+	void rrHL() { byte b = _rb(HL); _mc(HL, 1); _rr(b); _sb(HL, b); }
+	void rrA() { _rr(A); }
+
+	// 0x20
+	inline void _sla(byte &b) {
+		if (b & 0x80) flags.C = 1;
+		b <<= 1;
+		_szp35(b);
+	}
+
+	void slab() { _sla(B); }
+	void slac() { _sla(C); }
+	void slad() { _sla(D); }
+	void slae() { _sla(E); }
+	void slah() { _sla(H); }
+	void slal() { _sla(L); }
+	void slaHL() { byte b = _rb(HL); _mc(HL, 1); _sla(b); _sb(HL, b); }
+	void slaa() { _sla(A); }
+
+	// 0x28
+	inline void _sra(byte &b) {
+		flags.C = b & 0x01;
+		b = (b & 0x80) | (b >> 1);
+		_szp35(b);
+	}
+
+	void srab() { _sra(B); }
+	void srac() { _sra(C); }
+	void srad() { _sra(D); }
+	void srae() { _sra(E); }
+	void srah() { _sra(H); }
+	void sral() { _sra(L); }
+	void sraHL() { byte b = _rb(HL); _mc(HL, 1); _sra(b); _sb(HL, b); }
+	void sraa() { _sra(A); }
+
+	// 0x30
+	inline void _sll(byte &b) {
+		if (b & 0x80) flags.C = 1;
+		b = (b << 1) | 0x01;
+		_szp35(b);
+	}
+
+	void sllb() { _sll(B); }
+	void sllc() { _sll(C); }
+	void slld() { _sll(D); }
+	void slle() { _sll(E); }
+	void sllh() { _sll(H); }
+	void slll() { _sll(L); }
+	void sllHL() { byte b = _rb(HL); _mc(HL, 1); _sll(b); _sb(HL, b); }
+	void slla() { _sll(A); }
+
+	// 0x38
+	inline void _srl(byte &b) {
+		flags.C = b & 0x01;
+		b >>= 1;
+		_szp35(b);
+	}
+
+	void srlb() { _srl(B); }
+	void srlc() { _srl(C); }
+	void srld() { _srl(D); }
+	void srle() { _srl(E); }
+	void srlh() { _srl(H); }
+	void srll() { _srl(L); }
+	void srlHL() { byte b = _rb(HL); _mc(HL, 1); _srl(b); _sb(HL, b); }
+	void srla() { _srl(A); }
+
+	// 0x40
+	inline void _bit(int i, byte b) {
+		if (!(b & (1 << i)))
+			flags.P = flags.Z = 1;
+		if (i == 7 && (b & 0x80))
+			flags.S = 1;
+		F |= b & flag35;
+		flags.H = 1;
+	}
+
+	inline void _bitHL(int i) {
+		byte b = _rb(HL); _mc(HL, 1); _bit(i, b);
+	}
+
+	void bit0b() { _bit(0, B); }
+	void bit0c() { _bit(0, C); }
+	void bit0d() { _bit(0, D); }
+	void bit0e() { _bit(0, E); }
+	void bit0h() { _bit(0, H); }
+	void bit0l() { _bit(0, L); }
+	void bit0HL() { _bitHL(0); }
+	void bit0a() { _bit(0, A); }
+
+	// 0x48
+	void bit1b() { _bit(1, B); }
+	void bit1c() { _bit(1, C); }
+	void bit1d() { _bit(1, D); }
+	void bit1e() { _bit(1, E); }
+	void bit1h() { _bit(1, H); }
+	void bit1l() { _bit(1, L); }
+	void bit1HL() { _bitHL(1); }
+	void bit1a() { _bit(1, A); }
+
+	// 0x50
+	void bit2b() { _bit(2, B); }
+	void bit2c() { _bit(2, C); }
+	void bit2d() { _bit(2, D); }
+	void bit2e() { _bit(2, E); }
+	void bit2h() { _bit(2, H); }
+	void bit2l() { _bit(2, L); }
+	void bit2HL() { _bitHL(2); }
+	void bit2a() { _bit(2, A); }
+
+	// 0x58
+	void bit3b() { _bit(3, B); }
+	void bit3c() { _bit(3, C); }
+	void bit3d() { _bit(3, D); }
+	void bit3e() { _bit(3, E); }
+	void bit3h() { _bit(3, H); }
+	void bit3l() { _bit(3, L); }
+	void bit3HL() { _bitHL(3); }
+	void bit3a() { _bit(3, A); }
+
+	// 0x60
+	void bit4b() { _bit(4, B); }
+	void bit4c() { _bit(4, C); }
+	void bit4d() { _bit(4, D); }
+	void bit4e() { _bit(4, E); }
+	void bit4h() { _bit(4, H); }
+	void bit4l() { _bit(4, L); }
+	void bit4HL() { _bitHL(4); }
+	void bit4a() { _bit(4, A); }
+
+	// 0x68
+	void bit5b() { _bit(5, B); }
+	void bit5c() { _bit(5, C); }
+	void bit5d() { _bit(5, D); }
+	void bit5e() { _bit(5, E); }
+	void bit5h() { _bit(5, H); }
+	void bit5l() { _bit(5, L); }
+	void bit5HL() { _bitHL(5); }
+	void bit5a() { _bit(5, A); }
+
+	// 0x70
+	void bit6b() { _bit(6, B); }
+	void bit6c() { _bit(6, C); }
+	void bit6d() { _bit(6, D); }
+	void bit6e() { _bit(6, E); }
+	void bit6h() { _bit(6, H); }
+	void bit6l() { _bit(6, L); }
+	void bit6HL() { _bitHL(6); }
+	void bit6a() { _bit(6, A); }
+
+	// 0x78
+	void bit7b() { _bit(7, B); }
+	void bit7c() { _bit(7, C); }
+	void bit7d() { _bit(7, D); }
+	void bit7e() { _bit(7, E); }
+	void bit7h() { _bit(7, H); }
+	void bit7l() { _bit(7, L); }
+	void bit7HL() { _bitHL(7); }
+	void bit7a() { _bit(7, A); }
+
+	// 0x80
+	inline void _resHL(byte m) {
+		byte b = _rb(HL);
+		_mc(HL, 1);
+		_sb(HL, b & m);
+	}
+	
+	void res0b() { B &= 0xfe; }
+	void res0c() { C &= 0xfe; }
+	void res0d() { D &= 0xfe; }
+	void res0e() { E &= 0xfe; }
+	void res0h() { H &= 0xfe; }
+	void res0l() { L &= 0xfe; }
+	void res0HL() { _resHL(0xfe); }
+	void res0a() { A &= 0xfe; }
+
+	// 0x88
+	void res1b() { B &= 0xfd; }
+	void res1c() { C &= 0xfd; }
+	void res1d() { D &= 0xfd; }
+	void res1e() { E &= 0xfd; }
+	void res1h() { H &= 0xfd; }
+	void res1l() { L &= 0xfd; }
+	void res1HL() { _resHL(0xfd); }
+	void res1a() { A &= 0xfd; }
+
+	// 0x90
+	void res2b() { B &= 0xfb; }
+	void res2c() { C &= 0xfb; }
+	void res2d() { D &= 0xfb; }
+	void res2e() { E &= 0xfb; }
+	void res2h() { H &= 0xfb; }
+	void res2l() { L &= 0xfb; }
+	void res2HL() { _resHL(0xfb); }
+	void res2a() { A &= 0xfb; }
+
+	// 0x98
+	void res3b() { B &= 0xf7; }
+	void res3c() { C &= 0xf7; }
+	void res3d() { D &= 0xf7; }
+	void res3e() { E &= 0xf7; }
+	void res3h() { H &= 0xf7; }
+	void res3l() { L &= 0xf7; }
+	void res3HL() { _resHL(0xf7); }
+	void res3a() { A &= 0xf7; }
+
+	// 0xa0
+	void res4b() { B &= 0xef; }
+	void res4c() { C &= 0xef; }
+	void res4d() { D &= 0xef; }
+	void res4e() { E &= 0xef; }
+	void res4h() { H &= 0xef; }
+	void res4l() { L &= 0xef; }
+	void res4HL() { _resHL(0xef); }
+	void res4a() { A &= 0xef; }
+
+	// 0xa8
+	void res5b() { B &= 0xdf; }
+	void res5c() { C &= 0xdf; }
+	void res5d() { D &= 0xdf; }
+	void res5e() { E &= 0xdf; }
+	void res5h() { H &= 0xdf; }
+	void res5l() { L &= 0xdf; }
+	void res5HL() { _resHL(0xdf); }
+	void res5a() { A &= 0xdf; }
+
+	// 0xb0
+	void res6b() { B &= 0xbf; }
+	void res6c() { C &= 0xbf; }
+	void res6d() { D &= 0xbf; }
+	void res6e() { E &= 0xbf; }
+	void res6h() { H &= 0xbf; }
+	void res6l() { L &= 0xbf; }
+	void res6HL() { _resHL(0xbf); }
+	void res6a() { A &= 0xbf; }
+
+	// 0xb8
+	void res7b() { B &= 0x7f; }
+	void res7c() { C &= 0x7f; }
+	void res7d() { D &= 0x7f; }
+	void res7e() { E &= 0x7f; }
+	void res7h() { H &= 0x7f; }
+	void res7l() { L &= 0x7f; }
+	void res7HL() { _resHL(0x7f); }
+	void res7a() { A &= 0x7f; }
+
+	// 0xc0
+	inline void _setHL(byte m) {
+		byte b = _rb(HL);
+		_mc(HL, 1);
+		_sb(HL, b | m);
+	}
+
+	void set0b() { B |= 0x01; }
+	void set0c() { C |= 0x01; }
+	void set0d() { D |= 0x01; }
+	void set0e() { E |= 0x01; }
+	void set0h() { H |= 0x01; }
+	void set0l() { L |= 0x01; }
+	void set0HL() { _setHL(0x01); }
+	void set0a() { A |= 0x01; }
+
+	// 0xc8
+	void set1b() { B |= 0x02; }
+	void set1c() { C |= 0x02; }
+	void set1d() { D |= 0x02; }
+	void set1e() { E |= 0x02; }
+	void set1h() { H |= 0x02; }
+	void set1l() { L |= 0x02; }
+	void set1HL() { _setHL(0x02); }
+	void set1a() { A |= 0x02; }
+
+	// 0xd0
+	void set2b() { B |= 0x04; }
+	void set2c() { C |= 0x04; }
+	void set2d() { D |= 0x04; }
+	void set2e() { E |= 0x04; }
+	void set2h() { H |= 0x04; }
+	void set2l() { L |= 0x04; }
+	void set2HL() { _setHL(0x04); }
+	void set2a() { A |= 0x04; }
+
+	// 0xd8
+	void set3b() { B |= 0x08; }
+	void set3c() { C |= 0x08; }
+	void set3d() { D |= 0x08; }
+	void set3e() { E |= 0x08; }
+	void set3h() { H |= 0x08; }
+	void set3l() { L |= 0x08; }
+	void set3HL() { _setHL(0x08); }
+	void set3a() { A |= 0x08; }
+
+	// 0xe0
+	void set4b() { B |= 0x10; }
+	void set4c() { C |= 0x10; }
+	void set4d() { D |= 0x10; }
+	void set4e() { E |= 0x10; }
+	void set4h() { H |= 0x10; }
+	void set4l() { L |= 0x10; }
+	void set4HL() { _setHL(0x10); }
+	void set4a() { A |= 0x10; }
+
+	// 0xe8
+	void set5b() { B |= 0x20; }
+	void set5c() { C |= 0x20; }
+	void set5d() { D |= 0x20; }
+	void set5e() { E |= 0x20; }
+	void set5h() { H |= 0x20; }
+	void set5l() { L |= 0x20; }
+	void set5HL() { _setHL(0x20); }
+	void set5a() { A |= 0x20; }
+
+	// 0xf0
+	void set6b() { B |= 0x40; }
+	void set6c() { C |= 0x40; }
+	void set6d() { D |= 0x40; }
+	void set6e() { E |= 0x40; }
+	void set6h() { H |= 0x40; }
+	void set6l() { L |= 0x40; }
+	void set6HL() { _setHL(0x40); }
+	void set6a() { A |= 0x40; }
+
+	// 0xf8
+	void set7b() { B |= 0x80; }
+	void set7c() { C |= 0x80; }
+	void set7d() { D |= 0x80; }
+	void set7e() { E |= 0x80; }
+	void set7h() { H |= 0x80; }
+	void set7l() { L |= 0x80; }
+	void set7HL() { _setHL(0x80); }
+	void set7a() { A |= 0x80; }
 };
 
 #endif
