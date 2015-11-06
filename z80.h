@@ -62,9 +62,9 @@ private:
 					unsigned C:1;
 					unsigned N:1;
 					unsigned P:1;
-					unsigned _:1;	// always 0
+					unsigned _3:1;
 					unsigned H:1;
-					unsigned I:1;
+					unsigned _5:1;
 					unsigned Z:1;
 					unsigned S:1;
 				} flags;
@@ -74,7 +74,6 @@ private:
 		};
 		word AF;
 	};
-	static const byte flag35 = (1 << 3) | (1 << 5);
 
 	union {
 		struct { byte C, B; };
@@ -155,26 +154,26 @@ private:
 		_sb(a, w & 0xff);
 	}
 
-	inline void _sz(byte r) {
-		flags.S = ((r & 0x80) != 0);
-		flags.Z = (r == 0);
+	inline void _35(byte r) {
+		flags._3 = ((r & 0x08) != 0);
+		flags._5 = ((r & 0x20) != 0);
 	}
 
-	inline void _szp(byte r) {
-		_sz(r);
-		flags.P = parity_table[r];
+	inline void _sz35(byte r) {
+		flags.S = ((r & 0x80) != 0);
+		flags.Z = (r == 0);
+		_35(r);
 	}
 
 	inline void _szp35(byte r) {
-		_sz(r);
+		_sz35(r);
 		flags.P = parity_table[r];
-		F |= (r & flag35);
 	}
 
 	inline void _inc(byte &b) {
 		word w = b + 1;
 		byte r = w & 0xff;
-		_sz(r);
+		_sz35(r);
 		flags.P = r == 0x80;
 		flags.N = 0;
 		flags.H = !(r & 0x0f);
@@ -184,7 +183,7 @@ private:
 	inline void _dec(byte &b) {
 		word w = b - 1;
 		byte r = w & 0xff;
-		_sz(r);
+		_sz35(r);
 		flags.P = r == 0x7f;
 		flags.N = 1;
 		flags.H = !(b & 0x0f);
@@ -198,6 +197,8 @@ private:
 		HL = (r & 0xffff);
 		flags.C = (r > 0xffff);
 		flags.H = 1;
+		flags.N = 0;
+		_35(H);
 	}
 
 	inline void _exch(word &a, word &b) { word t = b; b = a; a = t; }
@@ -228,7 +229,12 @@ private:
 	void incc() { _inc(C); }
 	void decc() { _dec(C); }
 	void ldc() { C = _rb(PC++); }
-	void rrca() { flags.C = (A & 0x01); A = (A >> 1) | (flags.C << 7); }
+	void rrca() { 
+		flags.H = flags.N = 0;
+		flags.C = (A & 0x01); 
+		A = (A >> 1) | (flags.C << 7); 
+		_35(A);
+	}
 
 	// 0x10
 	void djnz() { _mc(IR, 1); _jr(--B); }
@@ -276,7 +282,7 @@ private:
 	void incl() { _inc(L); }
 	void decl() { _dec(L); }
 	void ldl() { L = _rb(PC++); }
-	void cpl() { A = ~A; flags.H = flags.N = 1; }
+	void cpl() { A = ~A; flags.H = flags.N = 1; _35(A); }
 
 	// 0x30
 	void jrnc() { _jr(!flags.C); }
@@ -286,7 +292,7 @@ private:
 	void incHL() { byte b = _rb(HL); _mc(HL, 1); _inc(b); _sb(HL, b); }
 	void decHL() { byte b = _rb(HL); _mc(HL, 1); _dec(b); _sb(HL, b); }
 	void ldHL() { _sb(HL, _rb(PC++)); }
-	void scf() { flags.C = 1; flags.N = flags.H = 0; }
+	void scf() { flags.C = 1; flags.N = flags.H = 0; _35(A); }
 
 	// 0x38
 	void jrc() { _jr(flags.C); }
@@ -383,7 +389,7 @@ private:
 		word w = A + x;
 		byte b = A;
 		A = w & 0xff;
-		_sz(A);
+		_sz35(A);
 		flags.C = w > 0xff;
 		flags.N = 0;
 		byte v = b ^ A ^ x;
@@ -404,7 +410,7 @@ private:
 		word w = A + x + flags.C;
 		byte b = A;
 		A = w & 0xff;
-		_sz(A);
+		_sz35(A);
 		flags.C = w > 0xff;
 		flags.N = 0;
 		byte v = b ^ A ^ x;
@@ -459,7 +465,7 @@ private:
 	// 0xa0
 	inline void _and(byte b) {
 		A &= b;
-		_szp(A);
+		_szp35(A);
 		flags.C = flags.N = 0;
 		flags.H = 1;
 	}
@@ -475,7 +481,7 @@ private:
 	// 0xa8
 	inline void _xor(byte b) {
 		A ^= b;
-		_szp(A);
+		_szp35(A);
 		flags.C = flags.N = flags.H = 0;
 	}
 	void xorb() { _xor(B); }
@@ -490,7 +496,7 @@ private:
 	// 0xb0
 	inline void _or(byte b) {
 		A |= b;
-		_szp(A);
+		_szp35(A);
 		flags.C = flags.N = flags.H = 0;
 	}
 	void orb() { _or(B); }
@@ -506,6 +512,7 @@ private:
 	inline void _cmp(byte b) {
 		byte a = A;
 		_sub(b);
+		_35(b);
 		A = a;
 	}
 	void cpb() { _cmp(B); }
@@ -581,7 +588,7 @@ private:
 	void retp() { _ret(!flags.S); }
 	void popaf() { AF = _pop(); }
 	void jpp() { _jmp(!flags.S); }
-	void di() { flags.I = 0; }
+	void di() { /* FIXME */ }
 	void callp() { _call(!flags.S); }
 	void pushaf() { _mc(IR, 1); _push(AF); }
 	void or() { _or(_rb(PC++)); }
@@ -736,8 +743,8 @@ private:
 			flags.P = flags.Z = 1;
 		if (i == 7 && (b & 0x80))
 			flags.S = 1;
-		F |= b & flag35;
 		flags.H = 1;
+		_35(b);
 	}
 
 	inline void _bitHL(int i) {

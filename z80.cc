@@ -7,7 +7,7 @@
 
 #define CPU_STATE_FMT "%04x %02x %02x %04x %04x %04x %04x %d%d%d%d%d%d%d%d\r\n",\
 			PC, op, A, BC, DE, HL, SP, flags.S, flags.Z,\
-			flags.I, flags.H, flags._, flags.P, flags.N, flags.C
+			flags._5, flags.H, flags._3, flags.P, flags.N, flags.C
 
 void z80::step() {
 	_mc(PC, 4);
@@ -35,6 +35,7 @@ void z80::reset() {
 }
 
 void z80::raise(int level) {
+/* FIXME: interrupts
 	if (flags.I) {
 		flags.I = 0;
 		_irq_pending = 0;
@@ -42,12 +43,15 @@ void z80::raise(int level) {
 		PC = level * 8;
 	} else
 		_irq_pending = level;
+*/
 }
 
 void z80::ei() {
+/* FIXME: interrupts
 	flags.I = 1;
 	if (_irq_pending)
 		raise(_irq_pending);
+*/
 }
 
 char *z80::status() {
