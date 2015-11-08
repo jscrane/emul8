@@ -9,7 +9,7 @@
 			PC, op, A, BC, DE, HL, SP, flags.S, flags.Z,\
 			flags._5, flags.H, flags._3, flags.P, flags.N, flags.C
 
-void z80::step() {
+void z80::_step(OP ops[]) {
 	_mc(PC, 4);
 	byte op = _mem[PC];
 #if defined(CPU_DEBUG)
@@ -17,7 +17,7 @@ void z80::step() {
 #endif
 	PC++;
 	R++;
-	(this->*_ops[op])();
+	(this->*ops[op])();
 }
 
 void z80::run(unsigned clocks) {
@@ -84,7 +84,27 @@ void z80::halt() {
 }
 */
 
-void z80::cb() {
+void z80::_step_idx(OP_IDX ops[]) {
+
+	_mc(PC, 3);
+	byte off = _mem[PC];
+#if defined(CPU_DEBUG)
+	printf("%5d MR %04x %02x\n", _ts, PC, off);
+#endif
+	PC++;
+
+	_mc(PC, 3);
+	byte op = _mem[PC];
+#if defined(CPU_DEBUG)
+	printf("%5d MR %04x %02x\n", _ts, PC, op);
+#endif
+	_mc(PC, 1);
+	_mc(PC, 1);
+	PC++;
+	(this->*ops[op])(off);
+}
+
+void z80::dd() {
 	_mc(PC, 4);
 	byte op = _mem[PC];
 #if defined(CPU_DEBUG)
@@ -92,12 +112,12 @@ void z80::cb() {
 #endif
 	PC++;
 	R++;
-	(this->*_cb[op])();
-}
-
-void z80::dd() {
+	switch (op) {
+	case 0xcb:
+		_step_idx(_ddcb);
+		break;
 	// FIXME
-	halt();
+	}
 }
 
 void z80::ed() {
@@ -129,9 +149,9 @@ int z80::parity_table[] = {
 	1, 0, 0, 1, 0, 1, 1, 0, 0, 1, 1, 0, 1, 0, 0, 1,
 };
 
-z80::z80(Memory &m, jmp_buf *jb, CPU::statfn s, PortDevice<z80> &d): CPU(m, jb, s)
+z80::z80(Memory &m, jmp_buf *jb, CPU::statfn s, PortDevice<z80> &ports): CPU(m, jb, s)
 {
-	_ports = &d;
+	_ports = &ports;
 	_debug = false;
 
 	OP *p = _ops;
@@ -457,4 +477,166 @@ z80::z80(Memory &m, jmp_buf *jb, CPU::statfn s, PortDevice<z80> &d): CPU(m, jb, 
 	*c++ = &z80::set7d; *c++ = &z80::set7e;
 	*c++ = &z80::set7h; *c++ = &z80::set7l;
 	*c++ = &z80::set7HL; *c++ = &z80::set7a;
+
+	OP_IDX *d = _ddcb;
+
+	// 0x00
+	*d++ = &z80::rlcIXB; *d++ = &z80::rlcIXC;
+	*d++ = &z80::rlcIXD; *d++ = &z80::rlcIXE;
+	*d++ = &z80::rlcIXH; *d++ = &z80::rlcIXL;
+	*d++ = &z80::rlcIX; *d++ = &z80::rlcIXA;
+	*d++ = &z80::rrcIXB; *d++ = &z80::rrcIXC;
+	*d++ = &z80::rrcIXD; *d++ = &z80::rrcIXE;
+	*d++ = &z80::rrcIXH; *d++ = &z80::rrcIXL;
+	*d++ = &z80::rrcIX; *d++ = &z80::rrcIXA;
+
+	// 0x10
+	*d++ = &z80::rlIXB; *d++ = &z80::rlIXC;
+	*d++ = &z80::rlIXD; *d++ = &z80::rlIXE;
+	*d++ = &z80::rlIXH; *d++ = &z80::rlIXL;
+	*d++ = &z80::rlIX; *d++ = &z80::rlIXA;
+	*d++ = &z80::rrIXB; *d++ = &z80::rrIXC;
+	*d++ = &z80::rrIXD; *d++ = &z80::rrIXE;
+	*d++ = &z80::rrIXH; *d++ = &z80::rrIXL;
+	*d++ = &z80::rrIX; *d++ = &z80::rrIXA;
+
+	// 0x20
+	*d++ = &z80::slaIXB; *d++ = &z80::slaIXC;
+	*d++ = &z80::slaIXD; *d++ = &z80::slaIXE;
+	*d++ = &z80::slaIXH; *d++ = &z80::slaIXL;
+	*d++ = &z80::slaIX; *d++ = &z80::slaIXA;
+	*d++ = &z80::sraIXB; *d++ = &z80::sraIXC;
+	*d++ = &z80::sraIXD; *d++ = &z80::sraIXE;
+	*d++ = &z80::sraIXH; *d++ = &z80::sraIXL;
+	*d++ = &z80::sraIX; *d++ = &z80::sraIXA;
+
+	// 0x30
+	*d++ = &z80::sllIXB; *d++ = &z80::sllIXC;
+	*d++ = &z80::sllIXD; *d++ = &z80::sllIXE;
+	*d++ = &z80::sllIXH; *d++ = &z80::sllIXL;
+	*d++ = &z80::sllIX; *d++ = &z80::sllIXA;
+	*d++ = &z80::srlIXB; *d++ = &z80::srlIXC;
+	*d++ = &z80::srlIXD; *d++ = &z80::srlIXE;
+	*d++ = &z80::srlIXH; *d++ = &z80::srlIXL;
+	*d++ = &z80::srlIX; *d++ = &z80::srlIXA;
+
+	// 0x40
+	*d++ = &z80::bit0IX; *d++ = &z80::bit0IX;
+	*d++ = &z80::bit0IX; *d++ = &z80::bit0IX;
+	*d++ = &z80::bit0IX; *d++ = &z80::bit0IX;
+	*d++ = &z80::bit0IX; *d++ = &z80::bit0IX;
+	*d++ = &z80::bit1IX; *d++ = &z80::bit1IX;
+	*d++ = &z80::bit1IX; *d++ = &z80::bit1IX;
+	*d++ = &z80::bit1IX; *d++ = &z80::bit1IX;
+	*d++ = &z80::bit1IX; *d++ = &z80::bit1IX;
+
+	// 0x50
+	*d++ = &z80::bit2IX; *d++ = &z80::bit2IX;
+	*d++ = &z80::bit2IX; *d++ = &z80::bit2IX;
+	*d++ = &z80::bit2IX; *d++ = &z80::bit2IX;
+	*d++ = &z80::bit2IX; *d++ = &z80::bit2IX;
+	*d++ = &z80::bit3IX; *d++ = &z80::bit3IX;
+	*d++ = &z80::bit3IX; *d++ = &z80::bit3IX;
+	*d++ = &z80::bit3IX; *d++ = &z80::bit3IX;
+	*d++ = &z80::bit3IX; *d++ = &z80::bit3IX;
+
+	// 0x60
+	*d++ = &z80::bit4IX; *d++ = &z80::bit4IX;
+	*d++ = &z80::bit4IX; *d++ = &z80::bit4IX;
+	*d++ = &z80::bit4IX; *d++ = &z80::bit4IX;
+	*d++ = &z80::bit4IX; *d++ = &z80::bit4IX;
+	*d++ = &z80::bit5IX; *d++ = &z80::bit5IX;
+	*d++ = &z80::bit5IX; *d++ = &z80::bit5IX;
+	*d++ = &z80::bit5IX; *d++ = &z80::bit5IX;
+	*d++ = &z80::bit5IX; *d++ = &z80::bit5IX;
+
+	// 0x70
+	*d++ = &z80::bit6IX; *d++ = &z80::bit6IX;
+	*d++ = &z80::bit6IX; *d++ = &z80::bit6IX;
+	*d++ = &z80::bit6IX; *d++ = &z80::bit6IX;
+	*d++ = &z80::bit6IX; *d++ = &z80::bit6IX;
+	*d++ = &z80::bit7IX; *d++ = &z80::bit7IX;
+	*d++ = &z80::bit7IX; *d++ = &z80::bit7IX;
+	*d++ = &z80::bit7IX; *d++ = &z80::bit7IX;
+	*d++ = &z80::bit7IX; *d++ = &z80::bit7IX;
+
+	// 0x80
+	*d++ = &z80::res0IXB; *d++ = &z80::res0IXC;
+	*d++ = &z80::res0IXD; *d++ = &z80::res0IXE;
+	*d++ = &z80::res0IXH; *d++ = &z80::res0IXL;
+	*d++ = &z80::res0IX; *d++ = &z80::res0IXA;
+	*d++ = &z80::res1IXB; *d++ = &z80::res1IXC;
+	*d++ = &z80::res1IXD; *d++ = &z80::res1IXE;
+	*d++ = &z80::res1IXH; *d++ = &z80::res1IXL;
+	*d++ = &z80::res1IX; *d++ = &z80::res1IXA;
+
+	// 0x90
+	*d++ = &z80::res2IXB; *d++ = &z80::res2IXC;
+	*d++ = &z80::res2IXD; *d++ = &z80::res2IXE;
+	*d++ = &z80::res2IXH; *d++ = &z80::res2IXL;
+	*d++ = &z80::res2IX; *d++ = &z80::res2IXA;
+	*d++ = &z80::res3IXB; *d++ = &z80::res3IXC;
+	*d++ = &z80::res3IXD; *d++ = &z80::res3IXE;
+	*d++ = &z80::res3IXH; *d++ = &z80::res3IXL;
+	*d++ = &z80::res3IX; *d++ = &z80::res3IXA;
+
+	// 0xa0
+	*d++ = &z80::res4IXB; *d++ = &z80::res4IXC;
+	*d++ = &z80::res4IXD; *d++ = &z80::res4IXE;
+	*d++ = &z80::res4IXH; *d++ = &z80::res4IXL;
+	*d++ = &z80::res4IX; *d++ = &z80::res4IXA;
+	*d++ = &z80::res5IXB; *d++ = &z80::res5IXC;
+	*d++ = &z80::res5IXD; *d++ = &z80::res5IXE;
+	*d++ = &z80::res5IXH; *d++ = &z80::res5IXL;
+	*d++ = &z80::res5IX; *d++ = &z80::res5IXA;
+
+	// 0xb0
+	*d++ = &z80::res6IXB; *d++ = &z80::res6IXC;
+	*d++ = &z80::res6IXD; *d++ = &z80::res6IXE;
+	*d++ = &z80::res6IXH; *d++ = &z80::res6IXL;
+	*d++ = &z80::res6IX; *d++ = &z80::res6IXA;
+	*d++ = &z80::res7IXB; *d++ = &z80::res7IXC;
+	*d++ = &z80::res7IXD; *d++ = &z80::res7IXE;
+	*d++ = &z80::res7IXH; *d++ = &z80::res7IXL;
+	*d++ = &z80::res7IX; *d++ = &z80::res7IXA;
+
+	// 0xc0
+	*d++ = &z80::set0IXB; *d++ = &z80::set0IXC;
+	*d++ = &z80::set0IXD; *d++ = &z80::set0IXE;
+	*d++ = &z80::set0IXH; *d++ = &z80::set0IXL;
+	*d++ = &z80::set0IX; *d++ = &z80::set0IXA;
+	*d++ = &z80::set1IXB; *d++ = &z80::set1IXC;
+	*d++ = &z80::set1IXD; *d++ = &z80::set1IXE;
+	*d++ = &z80::set1IXH; *d++ = &z80::set1IXL;
+	*d++ = &z80::set1IX; *d++ = &z80::set1IXA;
+
+	// 0xd0
+	*d++ = &z80::set2IXB; *d++ = &z80::set2IXC;
+	*d++ = &z80::set2IXD; *d++ = &z80::set2IXE;
+	*d++ = &z80::set2IXH; *d++ = &z80::set2IXL;
+	*d++ = &z80::set2IX; *d++ = &z80::set2IXA;
+	*d++ = &z80::set3IXB; *d++ = &z80::set3IXC;
+	*d++ = &z80::set3IXD; *d++ = &z80::set3IXE;
+	*d++ = &z80::set3IXH; *d++ = &z80::set3IXL;
+	*d++ = &z80::set3IX; *d++ = &z80::set3IXA;
+
+	// 0xe0
+	*d++ = &z80::set4IXB; *d++ = &z80::set4IXC;
+	*d++ = &z80::set4IXD; *d++ = &z80::set4IXE;
+	*d++ = &z80::set4IXH; *d++ = &z80::set4IXL;
+	*d++ = &z80::set4IX; *d++ = &z80::set4IXA;
+	*d++ = &z80::set5IXB; *d++ = &z80::set5IXC;
+	*d++ = &z80::set5IXD; *d++ = &z80::set5IXE;
+	*d++ = &z80::set5IXH; *d++ = &z80::set5IXL;
+	*d++ = &z80::set5IX; *d++ = &z80::set5IXA;
+
+	// 0xf0
+	*d++ = &z80::set6IXB; *d++ = &z80::set6IXC;
+	*d++ = &z80::set6IXD; *d++ = &z80::set6IXE;
+	*d++ = &z80::set6IXH; *d++ = &z80::set6IXL;
+	*d++ = &z80::set6IX; *d++ = &z80::set6IXA;
+	*d++ = &z80::set7IXB; *d++ = &z80::set7IXC;
+	*d++ = &z80::set7IXD; *d++ = &z80::set7IXE;
+	*d++ = &z80::set7IXH; *d++ = &z80::set7IXL;
+	*d++ = &z80::set7IX; *d++ = &z80::set7IXA;
 }

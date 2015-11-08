@@ -53,7 +53,13 @@ public:
 	inline void ts(int t) { _ts += t; }
 
 private:
-	inline void step();
+	typedef void (z80::*OP)(); 
+	void _step(OP ops[]);
+
+	typedef void (z80::*OP_IDX)(byte); 
+	void _step_idx(OP_IDX ops[]);
+
+	inline void step() { _step(_ops); }
 
 	union {
 		struct {
@@ -103,9 +109,8 @@ private:
 	int _irq_pending;
 	PortDevice<z80> *_ports;
 
-	typedef void (z80::*OP)(); 
-	OP _ops[256];
-	OP _cb[256];
+	OP _ops[256], _cb[256];
+	OP_IDX _ddcb[256], _fdcb[256];
 
 	static int parity_table[256];
 
@@ -302,7 +307,7 @@ private:
 	void inca() { _inc(A); }
 	void deca() { _dec(A); }
 	void lda() { A = _rb(PC++); }
-	void ccf() { flags.C = !flags.C; flags.N = 0; }
+	void ccf() { flags.C = !flags.C; flags.N = 0; _35(A); }
 
 	// 0x40
 	void ldbb() {}
@@ -538,9 +543,9 @@ private:
 	void retz() { _ret(flags.Z); }
 	void ret() { PC = _pop(); }
 	void jpz() { _jmp(flags.Z); }
-	void cb();
+	void cb() { _step(_cb); }
 	void callz() { _call(flags.Z); }
-	void call() { word pc = _rw(PC); _mc(PC, 1); _push(PC+2); PC = pc; }
+	void call() { word pc = _rw(PC); _mc(PC+1, 1); _push(PC+2); PC = pc; }
 	void adca() { _adc(_rb(PC++)); }
 	void rst08() { _mc(IR, 1); _push(PC); PC = 0x08; }
 
@@ -611,6 +616,7 @@ private:
 		b = (b << 1) | (b >> 7);
 		flags.C = b & 0x01;
 		_szp35(b);
+		flags.N = flags.H = 0;
 	}
 
 	void rlcB() { _rlc(B); }
@@ -627,6 +633,7 @@ private:
 		flags.C = b & 0x01;
 		b = (b >> 1) | (b << 7);
 		_szp35(b);
+		flags.N = flags.H = 0;
 	}
 
 	void rrcB() { _rrc(B); }
@@ -644,6 +651,7 @@ private:
 		b = (b << 1) | flags.C;
 		flags.C = (a >> 7);
 		_szp35(b);
+		flags.N = flags.H = 0;
 	}
 
 	void rlB() { _rl(B); }
@@ -662,6 +670,7 @@ private:
 		if (flags.C) b |= 0x80;
 		flags.C = a & 0x01;
 		_szp35(b);
+		flags.N = flags.H = 0;
 	}
 
 	void rrB() { _rr(B); }
@@ -678,6 +687,7 @@ private:
 		if (b & 0x80) flags.C = 1;
 		b <<= 1;
 		_szp35(b);
+		flags.N = flags.H = 0;
 	}
 
 	void slab() { _sla(B); }
@@ -694,6 +704,7 @@ private:
 		flags.C = b & 0x01;
 		b = (b & 0x80) | (b >> 1);
 		_szp35(b);
+		flags.N = flags.H = 0;
 	}
 
 	void srab() { _sra(B); }
@@ -710,6 +721,7 @@ private:
 		if (b & 0x80) flags.C = 1;
 		b = (b << 1) | 0x01;
 		_szp35(b);
+		flags.N = flags.H = 0;
 	}
 
 	void sllb() { _sll(B); }
@@ -726,6 +738,7 @@ private:
 		flags.C = b & 0x01;
 		b >>= 1;
 		_szp35(b);
+		flags.N = flags.H = 0;
 	}
 
 	void srlb() { _srl(B); }
@@ -739,11 +752,10 @@ private:
 
 	// 0x40
 	inline void _bit(int i, byte b) {
-		if (!(b & (1 << i)))
-			flags.P = flags.Z = 1;
-		if (i == 7 && (b & 0x80))
-			flags.S = 1;
+		flags.P = flags.Z = !(b & (1 << i));
+		flags.S = (i == 7 && (b & 0x80));
 		flags.H = 1;
+		flags.N = 0;
 		_35(b);
 	}
 
@@ -1001,6 +1013,323 @@ private:
 	void set7l() { L |= 0x80; }
 	void set7HL() { _setHL(0x80); }
 	void set7a() { A |= 0x80; }
+
+	// 0xDDCB extended instructions
+
+	inline word _rbIX(byte &b, byte o) {
+		word a = IX + (char)o;
+		b = _rb(a);
+		_mc(a, 1);
+		return a;
+	}
+
+	// 0x00
+	inline void _rlcIX(byte &b, byte o) { 
+		word a = _rbIX(b, o); _rlc(b); _sb(a, b); 
+	}
+	void rlcIXB(byte o) { _rlcIX(B, o); }
+	void rlcIXC(byte o) { _rlcIX(C, o); }
+	void rlcIXD(byte o) { _rlcIX(D, o); }
+	void rlcIXE(byte o) { _rlcIX(E, o); }
+	void rlcIXH(byte o) { _rlcIX(H, o); }
+	void rlcIXL(byte o) { _rlcIX(L, o); }
+	void rlcIX(byte o) { byte b; _rlcIX(b, o); }
+	void rlcIXA(byte o) { _rlcIX(A, o); }
+
+	// 0x08
+	inline void _rrcIX(byte &b, byte o) { 
+		word a = _rbIX(b, o); _rrc(b); _sb(a, b); 
+	}
+	void rrcIXB(byte o) { _rrcIX(B, o); }
+	void rrcIXC(byte o) { _rrcIX(C, o); }
+	void rrcIXD(byte o) { _rrcIX(D, o); }
+	void rrcIXE(byte o) { _rrcIX(E, o); }
+	void rrcIXH(byte o) { _rrcIX(H, o); }
+	void rrcIXL(byte o) { _rrcIX(L, o); }
+	void rrcIX(byte o) { byte b; _rrcIX(b, o); }
+	void rrcIXA(byte o) { _rrcIX(A, o); }
+
+	// 0x10
+	inline void _rlIX(byte &b, byte o) { 
+		word a = _rbIX(b, o); _rl(b); _sb(a, b); 
+	}
+	void rlIXB(byte o) { _rlIX(B, o); }
+	void rlIXC(byte o) { _rlIX(C, o); }
+	void rlIXD(byte o) { _rlIX(D, o); }
+	void rlIXE(byte o) { _rlIX(E, o); }
+	void rlIXH(byte o) { _rlIX(H, o); }
+	void rlIXL(byte o) { _rlIX(L, o); }
+	void rlIX(byte o) { byte b; _rlIX(b, o); }
+	void rlIXA(byte o) { _rlIX(A, o); }
+
+	// 0x18
+	inline void _rrIX(byte &b, byte o) { 
+		word a = _rbIX(b, o); _rr(b); _sb(a, b); 
+	}
+	void rrIXB(byte o) { _rrIX(B, o); }
+	void rrIXC(byte o) { _rrIX(C, o); }
+	void rrIXD(byte o) { _rrIX(D, o); }
+	void rrIXE(byte o) { _rrIX(E, o); }
+	void rrIXH(byte o) { _rrIX(H, o); }
+	void rrIXL(byte o) { _rrIX(L, o); }
+	void rrIX(byte o) { byte b; _rrIX(b, o); }
+	void rrIXA(byte o) { _rrIX(A, o); }
+
+	// 0x20
+	inline void _slaIX(byte &b, byte o) { 
+		word a = _rbIX(b, o); _sla(b); _sb(a, b); 
+	}
+	void slaIXB(byte o) { _slaIX(B, o); }
+	void slaIXC(byte o) { _slaIX(C, o); }
+	void slaIXD(byte o) { _slaIX(D, o); }
+	void slaIXE(byte o) { _slaIX(E, o); }
+	void slaIXH(byte o) { _slaIX(H, o); }
+	void slaIXL(byte o) { _slaIX(L, o); }
+	void slaIX(byte o) { byte b; _slaIX(b, o); }
+	void slaIXA(byte o) { _slaIX(A, o); }
+
+	// 0x28
+	inline void _sraIX(byte &b, byte o) { 
+		word a = _rbIX(b, o); _sra(b); _sb(a, b); 
+	}
+	void sraIXB(byte o) { _sraIX(B, o); }
+	void sraIXC(byte o) { _sraIX(C, o); }
+	void sraIXD(byte o) { _sraIX(D, o); }
+	void sraIXE(byte o) { _sraIX(E, o); }
+	void sraIXH(byte o) { _sraIX(H, o); }
+	void sraIXL(byte o) { _sraIX(L, o); }
+	void sraIX(byte o) { byte b; _sraIX(b, o); }
+	void sraIXA(byte o) { _sraIX(A, o); }
+
+	// 0x30
+	inline void _sllIX(byte &b, byte o) { 
+		word a = _rbIX(b, o); _sll(b); _sb(a, b); 
+	}
+	void sllIXB(byte o) { _sllIX(B, o); }
+	void sllIXC(byte o) { _sllIX(C, o); }
+	void sllIXD(byte o) { _sllIX(D, o); }
+	void sllIXE(byte o) { _sllIX(E, o); }
+	void sllIXH(byte o) { _sllIX(H, o); }
+	void sllIXL(byte o) { _sllIX(L, o); }
+	void sllIX(byte o) { byte b; _sllIX(b, o); }
+	void sllIXA(byte o) { _sllIX(A, o); }
+
+	// 0x38
+	inline void _srlIX(byte &b, byte o) { 
+		word a = _rbIX(b, o); _srl(b); _sb(a, b); 
+	}
+	void srlIXB(byte o) { _srlIX(B, o); }
+	void srlIXC(byte o) { _srlIX(C, o); }
+	void srlIXD(byte o) { _srlIX(D, o); }
+	void srlIXE(byte o) { _srlIX(E, o); }
+	void srlIXH(byte o) { _srlIX(H, o); }
+	void srlIXL(byte o) { _srlIX(L, o); }
+	void srlIX(byte o) { byte b; _srlIX(b, o); }
+	void srlIXA(byte o) { _srlIX(A, o); }
+
+	// 0x40
+	inline void _biti(int i, byte o) {
+		word a = IX + (char)o; 
+		byte b = _rb(a); 
+		_mc(a, 1); 
+		_bit(i, b);
+		_35(a >> 8);
+	}
+
+	void bit0IX(byte o) { _biti(0, o); }
+
+	// 0x48
+	void bit1IX(byte o) { _biti(1, o); }
+
+	// 0x50
+	void bit2IX(byte o) { _biti(2, o); }
+
+	// 0x58
+	void bit3IX(byte o) { _biti(3, o); }
+
+	// 0x60
+	void bit4IX(byte o) { _biti(4, o); }
+
+	// 0x68
+	void bit5IX(byte o) { _biti(5, o); }
+
+	// 0x70
+	void bit6IX(byte o) { _biti(6, o); }
+
+	// 0x78
+	void bit7IX(byte o) { _biti(7, o); }
+
+	// 0x80
+	void _resIX(byte &b, byte o, byte m) {
+		word a = IX + (char)o;
+		b = _rb(a) & m;
+		_mc(a, 1);
+		_sb(a, b);
+	}
+	void res0IXB(byte o) { _resIX(B, o, 0xfe); }
+	void res0IXC(byte o) { _resIX(C, o, 0xfe); }
+	void res0IXD(byte o) { _resIX(D, o, 0xfe); }
+	void res0IXE(byte o) { _resIX(E, o, 0xfe); }
+	void res0IXH(byte o) { _resIX(H, o, 0xfe); }
+	void res0IXL(byte o) { _resIX(L, o, 0xfe); }
+	void res0IX(byte o) { byte b; _resIX(b, o, 0xfe); }
+	void res0IXA(byte o) { _resIX(A, o, 0xfe); }
+
+	// 0x88
+	void res1IXB(byte o) { _resIX(B, o, 0xfd); }
+	void res1IXC(byte o) { _resIX(C, o, 0xfd); }
+	void res1IXD(byte o) { _resIX(D, o, 0xfd); }
+	void res1IXE(byte o) { _resIX(E, o, 0xfd); }
+	void res1IXH(byte o) { _resIX(H, o, 0xfd); }
+	void res1IXL(byte o) { _resIX(L, o, 0xfd); }
+	void res1IX(byte o) { byte b; _resIX(b, o, 0xfd); }
+	void res1IXA(byte o) { _resIX(A, o, 0xfd); }
+
+	// 0x90
+	void res2IXB(byte o) { _resIX(B, o, 0xfb); }
+	void res2IXC(byte o) { _resIX(C, o, 0xfb); }
+	void res2IXD(byte o) { _resIX(D, o, 0xfb); }
+	void res2IXE(byte o) { _resIX(E, o, 0xfb); }
+	void res2IXH(byte o) { _resIX(H, o, 0xfb); }
+	void res2IXL(byte o) { _resIX(L, o, 0xfb); }
+	void res2IX(byte o) { byte b; _resIX(b, o, 0xfb); }
+	void res2IXA(byte o) { _resIX(A, o, 0xfb); }
+
+	// 0x98
+	void res3IXB(byte o) { _resIX(B, o, 0xf7); }
+	void res3IXC(byte o) { _resIX(C, o, 0xf7); }
+	void res3IXD(byte o) { _resIX(D, o, 0xf7); }
+	void res3IXE(byte o) { _resIX(E, o, 0xf7); }
+	void res3IXH(byte o) { _resIX(H, o, 0xf7); }
+	void res3IXL(byte o) { _resIX(L, o, 0xf7); }
+	void res3IX(byte o) { byte b; _resIX(b, o, 0xf7); }
+	void res3IXA(byte o) { _resIX(A, o, 0xf7); }
+
+	// 0xa0
+	void res4IXB(byte o) { _resIX(B, o, 0xef); }
+	void res4IXC(byte o) { _resIX(C, o, 0xef); }
+	void res4IXD(byte o) { _resIX(D, o, 0xef); }
+	void res4IXE(byte o) { _resIX(E, o, 0xef); }
+	void res4IXH(byte o) { _resIX(H, o, 0xef); }
+	void res4IXL(byte o) { _resIX(L, o, 0xef); }
+	void res4IX(byte o) { byte b; _resIX(b, o, 0xef); }
+	void res4IXA(byte o) { _resIX(A, o, 0xef); }
+
+	// 0xa8
+	void res5IXB(byte o) { _resIX(B, o, 0xdf); }
+	void res5IXC(byte o) { _resIX(C, o, 0xdf); }
+	void res5IXD(byte o) { _resIX(D, o, 0xdf); }
+	void res5IXE(byte o) { _resIX(E, o, 0xdf); }
+	void res5IXH(byte o) { _resIX(H, o, 0xdf); }
+	void res5IXL(byte o) { _resIX(L, o, 0xdf); }
+	void res5IX(byte o) { byte b; _resIX(b, o, 0xdf); }
+	void res5IXA(byte o) { _resIX(A, o, 0xdf); }
+
+	// 0xb0
+	void res6IXB(byte o) { _resIX(B, o, 0xbf); }
+	void res6IXC(byte o) { _resIX(C, o, 0xbf); }
+	void res6IXD(byte o) { _resIX(D, o, 0xbf); }
+	void res6IXE(byte o) { _resIX(E, o, 0xbf); }
+	void res6IXH(byte o) { _resIX(H, o, 0xbf); }
+	void res6IXL(byte o) { _resIX(L, o, 0xbf); }
+	void res6IX(byte o) { byte b; _resIX(b, o, 0xbf); }
+	void res6IXA(byte o) { _resIX(A, o, 0xbf); }
+
+	// 0xb8
+	void res7IXB(byte o) { _resIX(B, o, 0x7f); }
+	void res7IXC(byte o) { _resIX(C, o, 0x7f); }
+	void res7IXD(byte o) { _resIX(D, o, 0x7f); }
+	void res7IXE(byte o) { _resIX(E, o, 0x7f); }
+	void res7IXH(byte o) { _resIX(H, o, 0x7f); }
+	void res7IXL(byte o) { _resIX(L, o, 0x7f); }
+	void res7IX(byte o) { byte b; _resIX(b, o, 0x7f); }
+	void res7IXA(byte o) { _resIX(A, o, 0x7f); }
+
+	// 0xc0
+	void _setIX(byte &b, byte o, byte m) {
+		word a = IX + (char)o;
+		b = _rb(a) | m;
+		_mc(a, 1);
+		_sb(a, b);
+	}
+	void set0IXB(byte o) { _setIX(B, o, 0x01); }
+	void set0IXC(byte o) { _setIX(C, o, 0x01); }
+	void set0IXD(byte o) { _setIX(D, o, 0x01); }
+	void set0IXE(byte o) { _setIX(E, o, 0x01); }
+	void set0IXH(byte o) { _setIX(H, o, 0x01); }
+	void set0IXL(byte o) { _setIX(L, o, 0x01); }
+	void set0IX(byte o) { byte b; _setIX(b, o, 0x01); }
+	void set0IXA(byte o) { _setIX(A, o, 0x01); }
+
+	// 0xc8
+	void set1IXB(byte o) { _setIX(B, o, 0x02); }
+	void set1IXC(byte o) { _setIX(C, o, 0x02); }
+	void set1IXD(byte o) { _setIX(D, o, 0x02); }
+	void set1IXE(byte o) { _setIX(E, o, 0x02); }
+	void set1IXH(byte o) { _setIX(H, o, 0x02); }
+	void set1IXL(byte o) { _setIX(L, o, 0x02); }
+	void set1IX(byte o) { byte b; _setIX(b, o, 0x02); }
+	void set1IXA(byte o) { _setIX(A, o, 0x02); }
+
+	// 0xd0
+	void set2IXB(byte o) { _setIX(B, o, 0x04); }
+	void set2IXC(byte o) { _setIX(C, o, 0x04); }
+	void set2IXD(byte o) { _setIX(D, o, 0x04); }
+	void set2IXE(byte o) { _setIX(E, o, 0x04); }
+	void set2IXH(byte o) { _setIX(H, o, 0x04); }
+	void set2IXL(byte o) { _setIX(L, o, 0x04); }
+	void set2IX(byte o) { byte b; _setIX(b, o, 0x04); }
+	void set2IXA(byte o) { _setIX(A, o, 0x04); }
+
+	// 0xd8
+	void set3IXB(byte o) { _setIX(B, o, 0x08); }
+	void set3IXC(byte o) { _setIX(C, o, 0x08); }
+	void set3IXD(byte o) { _setIX(D, o, 0x08); }
+	void set3IXE(byte o) { _setIX(E, o, 0x08); }
+	void set3IXH(byte o) { _setIX(H, o, 0x08); }
+	void set3IXL(byte o) { _setIX(L, o, 0x08); }
+	void set3IX(byte o) { byte b; _setIX(b, o, 0x08); }
+	void set3IXA(byte o) { _setIX(A, o, 0x08); }
+
+	// 0xe0
+	void set4IXB(byte o) { _setIX(B, o, 0x10); }
+	void set4IXC(byte o) { _setIX(C, o, 0x10); }
+	void set4IXD(byte o) { _setIX(D, o, 0x10); }
+	void set4IXE(byte o) { _setIX(E, o, 0x10); }
+	void set4IXH(byte o) { _setIX(H, o, 0x10); }
+	void set4IXL(byte o) { _setIX(L, o, 0x10); }
+	void set4IX(byte o) { byte b; _setIX(b, o, 0x10); }
+	void set4IXA(byte o) { _setIX(A, o, 0x10); }
+
+	// 0xe8
+	void set5IXB(byte o) { _setIX(B, o, 0x20); }
+	void set5IXC(byte o) { _setIX(C, o, 0x20); }
+	void set5IXD(byte o) { _setIX(D, o, 0x20); }
+	void set5IXE(byte o) { _setIX(E, o, 0x20); }
+	void set5IXH(byte o) { _setIX(H, o, 0x20); }
+	void set5IXL(byte o) { _setIX(L, o, 0x20); }
+	void set5IX(byte o) { byte b; _setIX(b, o, 0x20); }
+	void set5IXA(byte o) { _setIX(A, o, 0x20); }
+
+	// 0xf0
+	void set6IXB(byte o) { _setIX(B, o, 0x40); }
+	void set6IXC(byte o) { _setIX(C, o, 0x40); }
+	void set6IXD(byte o) { _setIX(D, o, 0x40); }
+	void set6IXE(byte o) { _setIX(E, o, 0x40); }
+	void set6IXH(byte o) { _setIX(H, o, 0x40); }
+	void set6IXL(byte o) { _setIX(L, o, 0x40); }
+	void set6IX(byte o) { byte b; _setIX(b, o, 0x40); }
+	void set6IXA(byte o) { _setIX(A, o, 0x40); }
+
+	// 0xf8
+	void set7IXB(byte o) { _setIX(B, o, 0x80); }
+	void set7IXC(byte o) { _setIX(C, o, 0x80); }
+	void set7IXD(byte o) { _setIX(D, o, 0x80); }
+	void set7IXE(byte o) { _setIX(E, o, 0x80); }
+	void set7IXH(byte o) { _setIX(H, o, 0x80); }
+	void set7IXL(byte o) { _setIX(L, o, 0x80); }
+	void set7IX(byte o) { byte b; _setIX(b, o, 0x80); }
+	void set7IXA(byte o) { _setIX(A, o, 0x80); }
 };
 
 #endif
