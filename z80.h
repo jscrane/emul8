@@ -1014,6 +1014,13 @@ private:
 	void set7HL() { _setHL(0x80); }
 	void set7a() { A |= 0x80; }
 
+	inline void _bitI(int i, word a) {
+		byte b = _rb(a); 
+		_mc(a, 1); 
+		_bit(i, b);
+		_35(a >> 8);
+	}
+
 	// 0xDDCB extended instructions
 
 	inline word _rbIX(byte &b, byte o) {
@@ -1128,36 +1135,30 @@ private:
 	void srlIXA(byte o) { _srlIX(A, o); }
 
 	// 0x40
-	inline void _biti(int i, byte o) {
-		word a = IX + (char)o; 
-		byte b = _rb(a); 
-		_mc(a, 1); 
-		_bit(i, b);
-		_35(a >> 8);
-	}
+	inline void _bitIX(int i, byte o) { _bitI(i, IX + (char)o); }
 
-	void bit0IX(byte o) { _biti(0, o); }
+	void bit0IX(byte o) { _bitIX(0, o); }
 
 	// 0x48
-	void bit1IX(byte o) { _biti(1, o); }
+	void bit1IX(byte o) { _bitIX(1, o); }
 
 	// 0x50
-	void bit2IX(byte o) { _biti(2, o); }
+	void bit2IX(byte o) { _bitIX(2, o); }
 
 	// 0x58
-	void bit3IX(byte o) { _biti(3, o); }
+	void bit3IX(byte o) { _bitIX(3, o); }
 
 	// 0x60
-	void bit4IX(byte o) { _biti(4, o); }
+	void bit4IX(byte o) { _bitIX(4, o); }
 
 	// 0x68
-	void bit5IX(byte o) { _biti(5, o); }
+	void bit5IX(byte o) { _bitIX(5, o); }
 
 	// 0x70
-	void bit6IX(byte o) { _biti(6, o); }
+	void bit6IX(byte o) { _bitIX(6, o); }
 
 	// 0x78
-	void bit7IX(byte o) { _biti(7, o); }
+	void bit7IX(byte o) { _bitIX(7, o); }
 
 	// 0x80
 	void _resIX(byte &b, byte o, byte m) {
@@ -1330,6 +1331,317 @@ private:
 	void set7IXL(byte o) { _setIX(L, o, 0x80); }
 	void set7IX(byte o) { byte b; _setIX(b, o, 0x80); }
 	void set7IXA(byte o) { _setIX(A, o, 0x80); }
+
+	// 0xFDCB extended instructions
+
+	inline word _rbIY(byte &b, byte o) {
+		word a = IY + (char)o;
+		b = _rb(a);
+		_mc(a, 1);
+		return a;
+	}
+
+	// 0x00
+	inline void _rlcIY(byte &b, byte o) { 
+		word a = _rbIY(b, o); _rlc(b); _sb(a, b); 
+	}
+	void rlcIYB(byte o) { _rlcIY(B, o); }
+	void rlcIYC(byte o) { _rlcIY(C, o); }
+	void rlcIYD(byte o) { _rlcIY(D, o); }
+	void rlcIYE(byte o) { _rlcIY(E, o); }
+	void rlcIYH(byte o) { _rlcIY(H, o); }
+	void rlcIYL(byte o) { _rlcIY(L, o); }
+	void rlcIY(byte o) { byte b; _rlcIY(b, o); }
+	void rlcIYA(byte o) { _rlcIY(A, o); }
+
+	// 0x08
+	inline void _rrcIY(byte &b, byte o) { 
+		word a = _rbIY(b, o); _rrc(b); _sb(a, b); 
+	}
+	void rrcIYB(byte o) { _rrcIY(B, o); }
+	void rrcIYC(byte o) { _rrcIY(C, o); }
+	void rrcIYD(byte o) { _rrcIY(D, o); }
+	void rrcIYE(byte o) { _rrcIY(E, o); }
+	void rrcIYH(byte o) { _rrcIY(H, o); }
+	void rrcIYL(byte o) { _rrcIY(L, o); }
+	void rrcIY(byte o) { byte b; _rrcIY(b, o); }
+	void rrcIYA(byte o) { _rrcIY(A, o); }
+
+	// 0x10
+	inline void _rlIY(byte &b, byte o) { 
+		word a = _rbIY(b, o); _rl(b); _sb(a, b); 
+	}
+	void rlIYB(byte o) { _rlIY(B, o); }
+	void rlIYC(byte o) { _rlIY(C, o); }
+	void rlIYD(byte o) { _rlIY(D, o); }
+	void rlIYE(byte o) { _rlIY(E, o); }
+	void rlIYH(byte o) { _rlIY(H, o); }
+	void rlIYL(byte o) { _rlIY(L, o); }
+	void rlIY(byte o) { byte b; _rlIY(b, o); }
+	void rlIYA(byte o) { _rlIY(A, o); }
+
+	// 0x18
+	inline void _rrIY(byte &b, byte o) { 
+		word a = _rbIY(b, o); _rr(b); _sb(a, b); 
+	}
+	void rrIYB(byte o) { _rrIY(B, o); }
+	void rrIYC(byte o) { _rrIY(C, o); }
+	void rrIYD(byte o) { _rrIY(D, o); }
+	void rrIYE(byte o) { _rrIY(E, o); }
+	void rrIYH(byte o) { _rrIY(H, o); }
+	void rrIYL(byte o) { _rrIY(L, o); }
+	void rrIY(byte o) { byte b; _rrIY(b, o); }
+	void rrIYA(byte o) { _rrIY(A, o); }
+
+	// 0x20
+	inline void _slaIY(byte &b, byte o) { 
+		word a = _rbIY(b, o); _sla(b); _sb(a, b); 
+	}
+	void slaIYB(byte o) { _slaIY(B, o); }
+	void slaIYC(byte o) { _slaIY(C, o); }
+	void slaIYD(byte o) { _slaIY(D, o); }
+	void slaIYE(byte o) { _slaIY(E, o); }
+	void slaIYH(byte o) { _slaIY(H, o); }
+	void slaIYL(byte o) { _slaIY(L, o); }
+	void slaIY(byte o) { byte b; _slaIY(b, o); }
+	void slaIYA(byte o) { _slaIY(A, o); }
+
+	// 0x28
+	inline void _sraIY(byte &b, byte o) { 
+		word a = _rbIY(b, o); _sra(b); _sb(a, b); 
+	}
+	void sraIYB(byte o) { _sraIY(B, o); }
+	void sraIYC(byte o) { _sraIY(C, o); }
+	void sraIYD(byte o) { _sraIY(D, o); }
+	void sraIYE(byte o) { _sraIY(E, o); }
+	void sraIYH(byte o) { _sraIY(H, o); }
+	void sraIYL(byte o) { _sraIY(L, o); }
+	void sraIY(byte o) { byte b; _sraIY(b, o); }
+	void sraIYA(byte o) { _sraIY(A, o); }
+
+	// 0x30
+	inline void _sllIY(byte &b, byte o) { 
+		word a = _rbIY(b, o); _sll(b); _sb(a, b); 
+	}
+	void sllIYB(byte o) { _sllIY(B, o); }
+	void sllIYC(byte o) { _sllIY(C, o); }
+	void sllIYD(byte o) { _sllIY(D, o); }
+	void sllIYE(byte o) { _sllIY(E, o); }
+	void sllIYH(byte o) { _sllIY(H, o); }
+	void sllIYL(byte o) { _sllIY(L, o); }
+	void sllIY(byte o) { byte b; _sllIY(b, o); }
+	void sllIYA(byte o) { _sllIY(A, o); }
+
+	// 0x38
+	inline void _srlIY(byte &b, byte o) { 
+		word a = _rbIY(b, o); _srl(b); _sb(a, b); 
+	}
+	void srlIYB(byte o) { _srlIY(B, o); }
+	void srlIYC(byte o) { _srlIY(C, o); }
+	void srlIYD(byte o) { _srlIY(D, o); }
+	void srlIYE(byte o) { _srlIY(E, o); }
+	void srlIYH(byte o) { _srlIY(H, o); }
+	void srlIYL(byte o) { _srlIY(L, o); }
+	void srlIY(byte o) { byte b; _srlIY(b, o); }
+	void srlIYA(byte o) { _srlIY(A, o); }
+
+	// 0x40
+	inline void _bitIY(int i, byte o) { _bitI(i, IY + (char)o); }
+
+	void bit0IY(byte o) { _bitIY(0, o); }
+
+	// 0x48
+	void bit1IY(byte o) { _bitIY(1, o); }
+
+	// 0x50
+	void bit2IY(byte o) { _bitIY(2, o); }
+
+	// 0x58
+	void bit3IY(byte o) { _bitIY(3, o); }
+
+	// 0x60
+	void bit4IY(byte o) { _bitIY(4, o); }
+
+	// 0x68
+	void bit5IY(byte o) { _bitIY(5, o); }
+
+	// 0x70
+	void bit6IY(byte o) { _bitIY(6, o); }
+
+	// 0x78
+	void bit7IY(byte o) { _bitIY(7, o); }
+
+	// 0x80
+	void _resIY(byte &b, byte o, byte m) {
+		word a = IY + (char)o;
+		b = _rb(a) & m;
+		_mc(a, 1);
+		_sb(a, b);
+	}
+	void res0IYB(byte o) { _resIY(B, o, 0xfe); }
+	void res0IYC(byte o) { _resIY(C, o, 0xfe); }
+	void res0IYD(byte o) { _resIY(D, o, 0xfe); }
+	void res0IYE(byte o) { _resIY(E, o, 0xfe); }
+	void res0IYH(byte o) { _resIY(H, o, 0xfe); }
+	void res0IYL(byte o) { _resIY(L, o, 0xfe); }
+	void res0IY(byte o) { byte b; _resIY(b, o, 0xfe); }
+	void res0IYA(byte o) { _resIY(A, o, 0xfe); }
+
+	// 0x88
+	void res1IYB(byte o) { _resIY(B, o, 0xfd); }
+	void res1IYC(byte o) { _resIY(C, o, 0xfd); }
+	void res1IYD(byte o) { _resIY(D, o, 0xfd); }
+	void res1IYE(byte o) { _resIY(E, o, 0xfd); }
+	void res1IYH(byte o) { _resIY(H, o, 0xfd); }
+	void res1IYL(byte o) { _resIY(L, o, 0xfd); }
+	void res1IY(byte o) { byte b; _resIY(b, o, 0xfd); }
+	void res1IYA(byte o) { _resIY(A, o, 0xfd); }
+
+	// 0x90
+	void res2IYB(byte o) { _resIY(B, o, 0xfb); }
+	void res2IYC(byte o) { _resIY(C, o, 0xfb); }
+	void res2IYD(byte o) { _resIY(D, o, 0xfb); }
+	void res2IYE(byte o) { _resIY(E, o, 0xfb); }
+	void res2IYH(byte o) { _resIY(H, o, 0xfb); }
+	void res2IYL(byte o) { _resIY(L, o, 0xfb); }
+	void res2IY(byte o) { byte b; _resIY(b, o, 0xfb); }
+	void res2IYA(byte o) { _resIY(A, o, 0xfb); }
+
+	// 0x98
+	void res3IYB(byte o) { _resIY(B, o, 0xf7); }
+	void res3IYC(byte o) { _resIY(C, o, 0xf7); }
+	void res3IYD(byte o) { _resIY(D, o, 0xf7); }
+	void res3IYE(byte o) { _resIY(E, o, 0xf7); }
+	void res3IYH(byte o) { _resIY(H, o, 0xf7); }
+	void res3IYL(byte o) { _resIY(L, o, 0xf7); }
+	void res3IY(byte o) { byte b; _resIY(b, o, 0xf7); }
+	void res3IYA(byte o) { _resIY(A, o, 0xf7); }
+
+	// 0xa0
+	void res4IYB(byte o) { _resIY(B, o, 0xef); }
+	void res4IYC(byte o) { _resIY(C, o, 0xef); }
+	void res4IYD(byte o) { _resIY(D, o, 0xef); }
+	void res4IYE(byte o) { _resIY(E, o, 0xef); }
+	void res4IYH(byte o) { _resIY(H, o, 0xef); }
+	void res4IYL(byte o) { _resIY(L, o, 0xef); }
+	void res4IY(byte o) { byte b; _resIY(b, o, 0xef); }
+	void res4IYA(byte o) { _resIY(A, o, 0xef); }
+
+	// 0xa8
+	void res5IYB(byte o) { _resIY(B, o, 0xdf); }
+	void res5IYC(byte o) { _resIY(C, o, 0xdf); }
+	void res5IYD(byte o) { _resIY(D, o, 0xdf); }
+	void res5IYE(byte o) { _resIY(E, o, 0xdf); }
+	void res5IYH(byte o) { _resIY(H, o, 0xdf); }
+	void res5IYL(byte o) { _resIY(L, o, 0xdf); }
+	void res5IY(byte o) { byte b; _resIY(b, o, 0xdf); }
+	void res5IYA(byte o) { _resIY(A, o, 0xdf); }
+
+	// 0xb0
+	void res6IYB(byte o) { _resIY(B, o, 0xbf); }
+	void res6IYC(byte o) { _resIY(C, o, 0xbf); }
+	void res6IYD(byte o) { _resIY(D, o, 0xbf); }
+	void res6IYE(byte o) { _resIY(E, o, 0xbf); }
+	void res6IYH(byte o) { _resIY(H, o, 0xbf); }
+	void res6IYL(byte o) { _resIY(L, o, 0xbf); }
+	void res6IY(byte o) { byte b; _resIY(b, o, 0xbf); }
+	void res6IYA(byte o) { _resIY(A, o, 0xbf); }
+
+	// 0xb8
+	void res7IYB(byte o) { _resIY(B, o, 0x7f); }
+	void res7IYC(byte o) { _resIY(C, o, 0x7f); }
+	void res7IYD(byte o) { _resIY(D, o, 0x7f); }
+	void res7IYE(byte o) { _resIY(E, o, 0x7f); }
+	void res7IYH(byte o) { _resIY(H, o, 0x7f); }
+	void res7IYL(byte o) { _resIY(L, o, 0x7f); }
+	void res7IY(byte o) { byte b; _resIY(b, o, 0x7f); }
+	void res7IYA(byte o) { _resIY(A, o, 0x7f); }
+
+	// 0xc0
+	void _setIY(byte &b, byte o, byte m) {
+		word a = IY + (char)o;
+		b = _rb(a) | m;
+		_mc(a, 1);
+		_sb(a, b);
+	}
+	void set0IYB(byte o) { _setIY(B, o, 0x01); }
+	void set0IYC(byte o) { _setIY(C, o, 0x01); }
+	void set0IYD(byte o) { _setIY(D, o, 0x01); }
+	void set0IYE(byte o) { _setIY(E, o, 0x01); }
+	void set0IYH(byte o) { _setIY(H, o, 0x01); }
+	void set0IYL(byte o) { _setIY(L, o, 0x01); }
+	void set0IY(byte o) { byte b; _setIY(b, o, 0x01); }
+	void set0IYA(byte o) { _setIY(A, o, 0x01); }
+
+	// 0xc8
+	void set1IYB(byte o) { _setIY(B, o, 0x02); }
+	void set1IYC(byte o) { _setIY(C, o, 0x02); }
+	void set1IYD(byte o) { _setIY(D, o, 0x02); }
+	void set1IYE(byte o) { _setIY(E, o, 0x02); }
+	void set1IYH(byte o) { _setIY(H, o, 0x02); }
+	void set1IYL(byte o) { _setIY(L, o, 0x02); }
+	void set1IY(byte o) { byte b; _setIY(b, o, 0x02); }
+	void set1IYA(byte o) { _setIY(A, o, 0x02); }
+
+	// 0xd0
+	void set2IYB(byte o) { _setIY(B, o, 0x04); }
+	void set2IYC(byte o) { _setIY(C, o, 0x04); }
+	void set2IYD(byte o) { _setIY(D, o, 0x04); }
+	void set2IYE(byte o) { _setIY(E, o, 0x04); }
+	void set2IYH(byte o) { _setIY(H, o, 0x04); }
+	void set2IYL(byte o) { _setIY(L, o, 0x04); }
+	void set2IY(byte o) { byte b; _setIY(b, o, 0x04); }
+	void set2IYA(byte o) { _setIY(A, o, 0x04); }
+
+	// 0xd8
+	void set3IYB(byte o) { _setIY(B, o, 0x08); }
+	void set3IYC(byte o) { _setIY(C, o, 0x08); }
+	void set3IYD(byte o) { _setIY(D, o, 0x08); }
+	void set3IYE(byte o) { _setIY(E, o, 0x08); }
+	void set3IYH(byte o) { _setIY(H, o, 0x08); }
+	void set3IYL(byte o) { _setIY(L, o, 0x08); }
+	void set3IY(byte o) { byte b; _setIY(b, o, 0x08); }
+	void set3IYA(byte o) { _setIY(A, o, 0x08); }
+
+	// 0xe0
+	void set4IYB(byte o) { _setIY(B, o, 0x10); }
+	void set4IYC(byte o) { _setIY(C, o, 0x10); }
+	void set4IYD(byte o) { _setIY(D, o, 0x10); }
+	void set4IYE(byte o) { _setIY(E, o, 0x10); }
+	void set4IYH(byte o) { _setIY(H, o, 0x10); }
+	void set4IYL(byte o) { _setIY(L, o, 0x10); }
+	void set4IY(byte o) { byte b; _setIY(b, o, 0x10); }
+	void set4IYA(byte o) { _setIY(A, o, 0x10); }
+
+	// 0xe8
+	void set5IYB(byte o) { _setIY(B, o, 0x20); }
+	void set5IYC(byte o) { _setIY(C, o, 0x20); }
+	void set5IYD(byte o) { _setIY(D, o, 0x20); }
+	void set5IYE(byte o) { _setIY(E, o, 0x20); }
+	void set5IYH(byte o) { _setIY(H, o, 0x20); }
+	void set5IYL(byte o) { _setIY(L, o, 0x20); }
+	void set5IY(byte o) { byte b; _setIY(b, o, 0x20); }
+	void set5IYA(byte o) { _setIY(A, o, 0x20); }
+
+	// 0xf0
+	void set6IYB(byte o) { _setIY(B, o, 0x40); }
+	void set6IYC(byte o) { _setIY(C, o, 0x40); }
+	void set6IYD(byte o) { _setIY(D, o, 0x40); }
+	void set6IYE(byte o) { _setIY(E, o, 0x40); }
+	void set6IYH(byte o) { _setIY(H, o, 0x40); }
+	void set6IYL(byte o) { _setIY(L, o, 0x40); }
+	void set6IY(byte o) { byte b; _setIY(b, o, 0x40); }
+	void set6IYA(byte o) { _setIY(A, o, 0x40); }
+
+	// 0xf8
+	void set7IYB(byte o) { _setIY(B, o, 0x80); }
+	void set7IYC(byte o) { _setIY(C, o, 0x80); }
+	void set7IYD(byte o) { _setIY(D, o, 0x80); }
+	void set7IYE(byte o) { _setIY(E, o, 0x80); }
+	void set7IYH(byte o) { _setIY(H, o, 0x80); }
+	void set7IYL(byte o) { _setIY(L, o, 0x80); }
+	void set7IY(byte o) { byte b; _setIY(b, o, 0x80); }
+	void set7IYA(byte o) { _setIY(A, o, 0x80); }
 };
 
 #endif
