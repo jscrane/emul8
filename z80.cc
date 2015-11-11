@@ -104,7 +104,7 @@ void z80::_step_idx(OP_IDX ops[]) {
 	(this->*ops[op])(off);
 }
 
-void z80::dd() {
+void z80::_ddfd(word &ix, byte &ixL, byte &ixH, OP_IDX ops[]) {
 	_mc(PC, 4);
 	byte op = _mem[PC];
 #if defined(CPU_DEBUG)
@@ -113,32 +113,270 @@ void z80::dd() {
 	PC++;
 	R++;
 	switch (op) {
-	case 0xcb:
-		_step_idx(_ddcb);
+	case 0x09:
+		_add16(ix, BC);
 		break;
-	// FIXME
+	case 0x19:
+		_add16(ix, DE);
+		break;
+	case 0x21:
+		ix = _rwpc();
+		break;
+	case 0x22:
+		_swPC(ix);
+		break;
+	case 0x23:
+		ix++;
+		_mc(IR, 1); _mc(IR, 1);
+		break;
+	case 0x24:
+		_inc(ixH);
+		break;
+	case 0x25:
+		_dec(ixH);
+		break;
+	case 0x26:
+		ixH = _rb(PC++);
+		break;
+	case 0x29:
+		_add16(ix, ix);
+		break;
+	case 0x2a:
+		ix = _rw(_rw(PC)); PC += 2;
+		break;
+	case 0x2b:
+		ix--;
+		_mc(IR, 1); _mc(IR, 1);
+		break;
+	case 0x2c:
+		_inc(ixL);
+		break;
+	case 0x2d:
+		_dec(ixL);
+		break;
+	case 0x2e:
+		ixL = _rb(PC++);
+		break;
+	case 0x34:
+		_incO(ix);
+		break;
+	case 0x35:
+		_decO(ix);
+		break;
+	case 0x36:
+		_sbO(ix);
+		break;
+	case 0x39:
+		_add16(ix, SP);
+		break;
+	case 0x44:
+		B = ixH;
+		break;
+	case 0x45:
+		B = ixL;
+		break;
+	case 0x46:
+		B = _rbO(ix);
+		break;
+	case 0x4c:
+		C = ixH;
+		break;
+	case 0x4d:
+		C = ixL;
+		break;
+	case 0x4e:
+		C = _rbO(ix);
+		break;
+	case 0x54:
+		D = ixH;
+		break;
+	case 0x55:
+		D = ixL;
+		break;
+	case 0x56:
+		D = _rbO(ix);
+		break;
+	case 0x5c:
+		E = ixH;
+		break;
+	case 0x5d:
+		E = ixL;
+		break;
+	case 0x5e:
+		E = _rbO(ix);
+		break;
+	case 0x60:
+		ixH = B;
+		break;
+	case 0x61:
+		ixH = C;
+		break;
+	case 0x62:
+		ixH = D;
+		break;
+	case 0x63:
+		ixH = E;
+		break;
+	case 0x64:
+		break;
+	case 0x65:
+		ixH = ixL;
+		break;
+	case 0x66:
+		H = _rbO(ix);
+		break;
+	case 0x67:
+		ixH = A;
+		break;
+	case 0x68:
+		ixL = B;
+		break;
+	case 0x69:
+		ixL = C;
+		break;
+	case 0x6a:
+		ixL = D;
+		break;
+	case 0x6b:
+		ixL = E;
+		break;
+	case 0x6c:
+		ixL = ixH;
+		break;
+	case 0x6d:
+		break;
+	case 0x6e:
+		L = _rbO(ix);
+		break;
+	case 0x6f:
+		ixL = A;
+		break;
+	case 0x70:
+		_sbO(ix, B);
+		break;
+	case 0x71:
+		_sbO(ix, C);
+		break;
+	case 0x72:
+		_sbO(ix, D);
+		break;
+	case 0x73:
+		_sbO(ix, E);
+		break;
+	case 0x74:
+		_sbO(ix, H);
+		break;
+	case 0x75:
+		_sbO(ix, L);
+		break;
+	case 0x77:
+		_sbO(ix, A);
+		break;
+	case 0x7c:
+		A = ixH;
+		break;
+	case 0x7d:
+		A = ixL;
+		break;
+	case 0x7e:
+		A = _rbO(ix);
+		break;
+	case 0x84:
+		_add(ixH);
+		break;
+	case 0x85:
+		_add(ixL);
+		break;
+	case 0x86:
+		_add(_rbO(ix));
+		break;
+	case 0x8c:
+		_adc(ixH);
+		break;
+	case 0x8d:
+		_adc(ixL);
+		break;
+	case 0x8e:
+		_adc(_rbO(ix));
+		break;
+	case 0x94:
+		_sub(ixH);
+		break;
+	case 0x95:
+		_sub(ixL);
+		break;
+	case 0x96:
+		_sub(_rbO(ix));
+		break;
+	case 0x9c:
+		_sbc(ixH);
+		break;
+	case 0x9d:
+		_sbc(ixL);
+		break;
+	case 0x9e:
+		_sbc(_rbO(ix));
+		break;
+	case 0xa4:
+		_and(ixH);
+		break;
+	case 0xa5:
+		_and(ixL);
+		break;
+	case 0xa6:
+		_and(_rbO(ix));
+		break;
+	case 0xac:
+		_xor(ixH);
+		break;
+	case 0xad:
+		_xor(ixL);
+		break;
+	case 0xae:
+		_xor(_rbO(ix));
+		break;
+	case 0xb4:
+		_or(ixH);
+		break;
+	case 0xb5:
+		_or(ixL);
+		break;
+	case 0xb6:
+		_or(_rbO(ix));
+		break;
+	case 0xbc:
+		_cmp(ixH);
+		break;
+	case 0xbd:
+		_cmp(ixL);
+		break;
+	case 0xbe:
+		_cmp(_rbO(ix));
+		break;
+	case 0xcb:
+		_step_idx(ops);
+		break;
+	case 0xe1:
+		ix = _pop();
+		break;
+	case 0xe3:
+		_exSP(ix);
+		break;
+	case 0xe5:
+		_mc(IR, 1);
+		_push(ix);
+		break;
+	case 0xe9:
+		PC = ix;
+		break;
+	case 0xf9:
+		_mc(IR, 1); _mc(IR, 1);
+		SP = ix;
+		break;
 	}
 }
 
 void z80::ed() {
-	// FIXME
-	halt();
-}
-
-void z80::fd() {
-	_mc(PC, 4);
-	byte op = _mem[PC];
-#if defined(CPU_DEBUG)
-	printf("%5d MR %04x %02x\n", _ts, PC, op);
-#endif
-	PC++;
-	R++;
-	switch (op) {
-	case 0xcb:
-		_step_idx(_fdcb);
-		break;
-	// FIXME
-	}
 }
 
 int z80::parity_table[] = {

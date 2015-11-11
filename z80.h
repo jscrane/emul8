@@ -56,10 +56,12 @@ private:
 	typedef void (z80::*OP)(); 
 	void _step(OP ops[]);
 
+	inline void step() { _step(_ops); }
+
 	typedef void (z80::*OP_IDX)(byte); 
 	void _step_idx(OP_IDX ops[]);
 
-	inline void step() { _step(_ops); }
+	void _ddfd(word &ix, byte &ixL, byte &ixH, OP_IDX ops[]);
 
 	union {
 		struct {
@@ -96,7 +98,17 @@ private:
 
 	Memory::address SP;
 
-	word AF_, BC_, DE_, HL_, IX, IY;
+	word AF_, BC_, DE_, HL_;
+
+	union {
+		struct { byte IXL, IXH; };
+		word IX;
+	};
+
+	union {
+		struct { byte IYL, IYH; };
+		word IY;
+	};
 
 	union {
 		struct { byte R, I; };
@@ -159,6 +171,14 @@ private:
 		_sb(a, w & 0xff);
 	}
 
+	inline word _rwpc() {
+		word w = _rw(PC);
+		PC += 2;
+		return w;
+	}
+
+	inline void _swPC(word w) { _sw(_rw(PC), w); PC += 2; }
+
 	inline void _35(byte r) {
 		flags._3 = ((r & 0x08) != 0);
 		flags._5 = ((r & 0x20) != 0);
@@ -195,15 +215,70 @@ private:
 		b = r;
 	}
 
-	inline void _dad(word w) {
+	inline void _add16(word &reg, word w) {
 		_mc(IR, 1); _mc(IR, 1); _mc(IR, 1);
 		_mc(IR, 1); _mc(IR, 1); _mc(IR, 1); _mc(IR, 1);
-		unsigned long r = HL + w;
-		HL = (r & 0xffff);
+		unsigned long r = reg + w;
+		reg = (r & 0xffff);
 		flags.C = (r > 0xffff);
 		flags.H = 1;
 		flags.N = 0;
-		_35(H);
+		_35(reg >> 8);
+	}
+
+	inline void _incO(Memory::address a) {
+		char o = (char)_rb(PC);
+		_mc(PC, 1); _mc(PC, 1); _mc(PC, 1);
+		_mc(PC, 1); _mc(PC, 1);
+		PC++;
+		word w = a + o;
+		byte b = _rb(w);
+		_mc(w, 1);
+		_inc(b);
+		_sb(w, b);
+	}
+
+	inline void _decO(Memory::address a) {
+		char o = (char)_rb(PC);
+		_mc(PC, 1); _mc(PC, 1); _mc(PC, 1);
+		_mc(PC, 1); _mc(PC, 1);
+		PC++;
+		word w = a + o;
+		byte b = _rb(w);
+		_mc(w, 1);
+		_dec(b);
+		_sb(w, b);
+	}
+
+	inline void _sbO(Memory::address a) {
+		char o = (char)_rb(PC++);
+		byte b = _rb(PC);
+		_mc(PC, 1); _mc(PC, 1);
+		PC++;
+		_sb(a + o, b);
+	}
+
+	inline byte _rbO(Memory::address a) {
+		char o = (char)_rb(PC);
+		_mc(PC, 1); _mc(PC, 1); _mc(PC, 1);
+		_mc(PC, 1); _mc(PC, 1);
+		PC++;
+		return _rb(a + o);
+	}
+
+	inline void _sbO(Memory::address a, byte b) {
+		char o = (char)_rb(PC);
+		_mc(PC, 1); _mc(PC, 1); _mc(PC, 1);
+		_mc(PC, 1); _mc(PC, 1);
+		PC++;
+		_sb(a + o, b);
+	}
+
+	inline void _exSP(word &reg) {
+		word w = _pop();
+		_mc(SP, 1);
+		_push(reg); reg = w;
+		_mc(SP, 1); _mc(SP, 1);
 	}
 
 	inline void _exch(word &a, word &b) { word t = b; b = a; a = t; }
@@ -218,7 +293,7 @@ private:
 
 	// 0x00
 	void nop() {}
-	void ldbcpc() { BC = _rw(PC); PC += 2; }
+	void ldbcpc() { BC = _rwpc(); }
 	void ldBCa() { _sb(BC, A); }
 	void incbc() { BC++; _mc(IR, 1); _mc(IR, 1); }
 	void incb() { _inc(B); }
@@ -228,7 +303,7 @@ private:
 
 	// 0x08
 	void exaf() { _exch(AF, AF_); }
-	void addhlbc() { _dad(BC); }
+	void addhlbc() { _add16(HL, BC); }
 	void ldaBC() { A = _rb(BC); }
 	void decbc() { BC--; _mc(IR, 1); _mc(IR, 1); }
 	void incc() { _inc(C); }
@@ -243,7 +318,7 @@ private:
 
 	// 0x10
 	void djnz() { _mc(IR, 1); _jr(--B); }
-	void lddepc() { DE = _rw(PC); PC += 2; }
+	void lddepc() { DE = _rwpc(); }
 	void ldDEa() { _sb(DE, A); }
 	void incde() { DE++; _mc(IR, 1); _mc(IR, 1); }
 	void incd() { _inc(D); }
@@ -257,7 +332,7 @@ private:
 
 	// 0x18
 	void jr() { char o = (char)_rb(PC); _mc(PC, 1); _mc(PC, 1); _mc(PC, 1); _mc(PC, 1); _mc(PC, 1); PC += o + 1; }
-	void addhlde() { _dad(DE); }
+	void addhlde() { _add16(HL, DE); }
 	void ldaDE() { A = _rb(DE); }
 	void decde() { DE--; _mc(IR, 1); _mc(IR, 1); }
 	void ince() { _inc(E); }
@@ -271,8 +346,8 @@ private:
 
 	// 0x20
 	void jrnz() { _jr(!flags.Z); }
-	void ldhlpc() { HL = _rw(PC); PC += 2; }
-	void ldPChl() { _sw(_rw(PC), HL); PC += 2; }
+	void ldhlpc() { HL = _rwpc(); }
+	void ldPChl() { _swPC(HL); }
 	void inchl() { HL++; _mc(IR, 1); _mc(IR, 1); }
 	void inch() { _inc(H); }
 	void dech() { _dec(H); }
@@ -281,7 +356,7 @@ private:
 
 	// 0x28
 	void jrz() { _jr(flags.Z); }
-	void addhlhl() { _dad(HL); }
+	void addhlhl() { _add16(HL, HL); }
 	void ldhlPC() { HL = _rw(_rw(PC)); PC += 2; }
 	void dechl() { HL--; _mc(IR, 1); _mc(IR, 1); }
 	void incl() { _inc(L); }
@@ -291,7 +366,7 @@ private:
 
 	// 0x30
 	void jrnc() { _jr(!flags.C); }
-	void ldsppc() { SP = _rw(PC); PC += 2; }
+	void ldsppc() { SP = _rwpc(); }
 	void ldPCa() { _sb(_rw(PC), A); PC += 2; }
 	void incsp() { SP++; _mc(IR, 1); _mc(IR, 1); }
 	void incHL() { byte b = _rb(HL); _mc(HL, 1); _inc(b); _sb(HL, b); }
@@ -301,7 +376,7 @@ private:
 
 	// 0x38
 	void jrc() { _jr(flags.C); }
-	void addhlsp() { _dad(SP); }
+	void addhlsp() { _add16(HL, SP); }
 	void ldaPC() { A = _rb(_rw(PC)); PC += 2; }
 	void decsp() { SP--; _mc(IR, 1); _mc(IR, 1); }
 	void inca() { _inc(A); }
@@ -565,7 +640,7 @@ private:
 	void jpc() { _jmp(flags.C); }
 	void ina() { byte p = _rb(PC++); _pc(p, 1); A = _ports->in(p, this); _pc(p, 3); }
 	void callc() { _call(flags.C); }
-	void dd();
+	void dd() { _ddfd(IX, IXL, IXH, _ddcb); }
 	void sbca() { _sbc(_rb(PC++)); }
 	void rst18() { _mc(IR, 1); _push(PC); PC = 0x18; }
 
@@ -573,7 +648,7 @@ private:
 	void retpo() { _ret(!flags.P); }
 	void pophl() { HL = _pop(); }
 	void jppo() { _jmp(!flags.P); }
-	void exSPhl() { word w = _pop(); _mc(SP, 1); _push(HL); HL = w; _mc(SP, 1); _mc(SP, 1); }
+	void exSPhl() { _exSP(HL); }
 	void callpo() { _call(!flags.P); }
 	void pushhl() { _mc(IR, 1); _push(HL); }
 	void and() { _and(_rb(PC++)); }
@@ -605,7 +680,7 @@ private:
 	void jpm() { _jmp(flags.S); }
 	void ei();
 	void callm() { _call(flags.S); }
-	void fd();
+	void fd() { _ddfd(IY, IYL, IYH, _fdcb); }
 	void cp() { _cmp(_rb(PC++)); }
 	void rst38() { _mc(IR, 1); _push(PC); PC = 0x38; }
 
