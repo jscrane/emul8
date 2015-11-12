@@ -239,17 +239,6 @@ private:
 		flags.H = (v >> 4) & 1;
 	}
 
-	inline void _add16(word &reg, word w) {
-		_mc(IR, 1); _mc(IR, 1); _mc(IR, 1);
-		_mc(IR, 1); _mc(IR, 1); _mc(IR, 1); _mc(IR, 1);
-		unsigned long r = reg + w;
-		reg = (r & 0xffff);
-		flags.C = (r > 0xffff);
-		flags.H = 1;
-		flags.N = 0;
-		_35(reg >> 8);
-	}
-
 	inline void _adc(byte x) {
 		word w = A + x + flags.C;
 		byte b = A;
@@ -266,12 +255,58 @@ private:
 		_mc(IR, 1); _mc(IR, 1); _mc(IR, 1);
 		_mc(IR, 1); _mc(IR, 1); _mc(IR, 1); _mc(IR, 1);
 		unsigned long r = reg + w + flags.C;
+		byte o = reg >> 8;
 		reg = (r & 0xffff);
-		_sz35(reg >> 8);
+		byte h = reg >> 8;
+		_sz35(h);
 		flags.Z = (reg == 0);
 		flags.C = (r > 0xffff);
 		flags.N = 0;
-		flags.H = 1;	// FIXME, flags P and H
+		byte v = o ^ h ^ (w >> 8);
+		flags.P = (v >> 7) ^ flags.C;
+		flags.H = (v >> 4) & 1;
+	}
+
+	inline void _add16(word &reg, word w) {
+		_mc(IR, 1); _mc(IR, 1); _mc(IR, 1);
+		_mc(IR, 1); _mc(IR, 1); _mc(IR, 1); _mc(IR, 1);
+		unsigned long r = reg + w;
+		byte o = reg >> 8;
+		reg = (r & 0xffff);
+		byte h = reg >> 8;
+		_35(h);
+		flags.C = (r > 0xffff);
+		flags.N = 0;
+		byte v = o ^ h ^ (w >> 8);
+		flags.P = (v >> 7) ^ flags.C;
+		flags.H = (v >> 4) & 1;
+	}
+
+	inline void _sub(byte x) {
+		byte b = A;
+		flags.C = 1;
+		_adc(~x);
+		flags.C = !flags.C;
+		flags.N = 1;
+		flags.H = (b & 0x0f) < (x & 0x0f);
+	}
+
+	inline void _sbc(byte x) {
+		byte b = A;
+		flags.C = !flags.C;
+		_adc(~x);
+		flags.C = !flags.C;
+		flags.N = 1;
+		flags.H = (b & 0x0f) < (x & 0x0f);
+	}
+
+	inline void _sbc16(word &reg, word w) {
+		word r = reg;
+		flags.C = !flags.C;
+		_adc16(reg, ~w);
+		flags.C = !flags.C;
+		flags.N = 1;
+		flags.H = ((r >> 8) & 0x0f) < ((w >> 8) & 0x0f);
 	}
 
 	inline void _incO(Memory::address a) {
@@ -533,14 +568,6 @@ private:
 	void adcaa() { _adc(A); }
 
 	// 0x90
-	inline void _sub(byte x) {
-		byte b = A;
-		flags.C = !flags.C;
-		_adc(~x);
-		flags.C = !flags.C;
-		flags.N = 1;
-		flags.H = (b & 0x0f) < (x & 0x0f);
-	}
 	void subab() { _sub(B); }
 	void subac() { _sub(C); }
 	void subad() { _sub(D); }
@@ -551,14 +578,6 @@ private:
 	void subaa() { _sub(A); }
 
 	// 0x98
-	inline void _sbc(byte x) {
-		byte b = A;
-		flags.C = !flags.C;
-		_adc(~x);
-		flags.C = !flags.C;
-		flags.N = 1;
-		flags.H = (b & 0x0f) < (x & 0x0f);
-	}
 	void sbcab() { _sbc(B); }
 	void sbcac() { _sbc(C); }
 	void sbcad() { _sbc(D); }

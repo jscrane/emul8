@@ -395,6 +395,7 @@ void z80::ed() {
 		_outr(BC, B);
 		break;
 	case 0x42:
+		_sbc16(HL, BC);
 		break;
 	case 0x43:
 		_swPC(BC);
@@ -456,6 +457,7 @@ void z80::ed() {
 		_outr(BC, D);
 		break;
 	case 0x52:
+		_sbc16(HL, DE);
 		break;
 	case 0x53:
 		_swPC(DE);
@@ -501,6 +503,7 @@ void z80::ed() {
 		_outr(BC, H);
 		break;
 	case 0x62:
+		_sbc16(HL, HL);
 		break;
 	case 0x63:
 		_swPC(HL);
@@ -542,6 +545,7 @@ void z80::ed() {
 		_outr(BC, 0);
 		break;
 	case 0x72:
+		_sbc16(HL, SP);
 		break;
 	case 0x73:
 		_swPC(SP);
