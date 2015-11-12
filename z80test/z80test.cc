@@ -14,13 +14,39 @@ class Ports: public PortDevice<z80> {
 public:
 	Ports(Memory &mem): _mem(mem) {}
 
-	void out(byte port, byte a, z80 *cpu) {
-		printf("%5d PW %04x %02x\n", cpu->ts(), port, a);
+	// not sure what this is all about, spectrum-specific stuff?
+	void pre(word p, z80 *c) {
+		if ((p & 0xc000) == 0x4000)
+			printf("%5d PC %04x\n", c->ts(), p);
+		c->ts(1);
 	}
 
-	byte in(byte port, z80 *cpu) {
-		printf("%5d PR %04x %02x\n", cpu->ts(), port, 0);
-		return 0;
+	void post(word p, z80 *c) {
+		if (p & 0x0001) {
+			if ((p & 0xc000) == 0x4000) {
+				printf("%5d PC %04x\n", c->ts(), p); c->ts(1);
+				printf("%5d PC %04x\n", c->ts(), p); c->ts(1);
+				printf("%5d PC %04x\n", c->ts(), p); c->ts(1);
+			} else
+				c->ts(3);
+		} else {
+			printf("%5d PC %04x\n", c->ts(), p);
+			c->ts(3);
+		}
+	}
+	
+	void out(word port, byte a, z80 *cpu) {
+		pre(port, cpu);
+		printf("%5d PW %04x %02x\n", cpu->ts(), port, a);
+		post(port, cpu);
+	}
+
+	byte in(word port, z80 *cpu) {
+		byte r = port >> 8;
+		pre(port, cpu);
+		printf("%5d PR %04x %02x\n", cpu->ts(), port, r);
+		post(port, cpu);
+		return r;
 	}
 
 private:

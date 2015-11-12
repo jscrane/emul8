@@ -378,7 +378,7 @@ void z80::_ddfd(word &ix, byte &ixL, byte &ixH, OP_IDX ops[]) {
 
 void z80::ed() {
 	_mc(PC, 4);
-	byte op = _mem[PC];
+	byte op = _mem[PC], b, c;
 #if defined(CPU_DEBUG)
 	printf("%5d MR %04x %02x\n", _ts, PC, op);
 #endif
@@ -394,8 +394,17 @@ void z80::ed() {
 	case 0x42:
 		break;
 	case 0x43:
+		_swPC(BC);
 		break;
 	case 0x44:
+	case 0x54:
+	case 0x64:
+	case 0x74:
+	case 0x4c:
+	case 0x5c:
+	case 0x6c:
+	case 0x7c:
+		_neg();
 		break;
 	case 0x45:
 		break;
@@ -410,10 +419,10 @@ void z80::ed() {
 		_outr(BC, C);
 		break;
 	case 0x4a:
+		_adc16(HL, BC);
 		break;
 	case 0x4b:
-		break;
-	case 0x4c:
+		BC = _rwPC();
 		break;
 	case 0x4d:
 		break;
@@ -430,8 +439,7 @@ void z80::ed() {
 	case 0x52:
 		break;
 	case 0x53:
-		break;
-	case 0x54:
+		_swPC(DE);
 		break;
 	case 0x55:
 		break;
@@ -446,10 +454,10 @@ void z80::ed() {
 		_outr(BC, E);
 		break;
 	case 0x5a:
+		_adc16(HL, DE);
 		break;
 	case 0x5b:
-		break;
-	case 0x5c:
+		DE = _rwPC();
 		break;
 	case 0x5d:
 		break;
@@ -466,8 +474,7 @@ void z80::ed() {
 	case 0x62:
 		break;
 	case 0x63:
-		break;
-	case 0x64:
+		_swPC(HL);
 		break;
 	case 0x65:
 		break;
@@ -482,10 +489,10 @@ void z80::ed() {
 		_outr(BC, L);
 		break;
 	case 0x6a:
+		_adc16(HL, HL);
 		break;
 	case 0x6b:
-		break;
-	case 0x6c:
+		HL = _rwPC();
 		break;
 	case 0x6d:
 		break;
@@ -502,8 +509,7 @@ void z80::ed() {
 	case 0x72:
 		break;
 	case 0x73:
-		break;
-	case 0x74:
+		_swPC(SP);
 		break;
 	case 0x75:
 		break;
@@ -516,44 +522,152 @@ void z80::ed() {
 		_outr(BC, A);
 		break;
 	case 0x7a:
+		_adc16(HL, SP);
 		break;
 	case 0x7b:
-		break;
-	case 0x7c:
+		SP = _rwPC();
 		break;
 	case 0x7d:
 		break;
 	case 0x7e:
 		break;
 	case 0xa0:
+		b = _rb(HL);
+		BC--;
+		_sb(DE, b);
+		_mc(DE, 1);
+		_mc(DE, 1);
+		DE++;
+		HL++;
+		b += A;
+		flags.P = (BC != 0);
+		flags._3 = (b & 0x08) != 0;
+		flags._5 = (b & 0x02) != 0;
+		flags.N = flags.H = 0;
 		break;
 	case 0xa1:
 		break;
 	case 0xa2:
+		_mc(IR, 1);
+		b = _inr(BC);
+		_sb(HL, b);
+		B--;
+		HL++;
+		c = b + flags.C + 1;
+		flags.N = (c & 0x80) != 0;
+		flags.C = flags.H = (c < b);
+		flags.P = parity_table[(c & 0x07) ^ B];
+		_sz35(B);
 		break;
 	case 0xa3:
 		break;
 	case 0xa8:
+		b = _rb(HL);
+		BC--;
+		_sb(DE, b);
+		_mc(DE, 1);
+		_mc(DE, 1);
+		DE--;
+		HL--;
+		b += A;
+		flags.P = (BC != 0);
+		flags._3 = (b & 0x08) != 0;
+		flags._5 = (b & 0x02) != 0;
+		flags.N = flags.H = 0;
 		break;
 	case 0xa9:
 		break;
 	case 0xaa:
+		_mc(IR, 1);
+		b = _inr(BC);
+		_sb(HL, b);
+		B--;
+		HL--;
+		c = b + flags.C + 1;
+		flags.N = (c & 0x80) != 0;
+		flags.C = flags.H = (c < b);
+		flags.P = parity_table[(c & 0x07) ^ B];
+		_sz35(B);
 		break;
 	case 0xab:
 		break;
 	case 0xb0:
+		b = _rb(HL);
+		BC--;
+		_sb(DE, b);
+		_mc(DE, 1);
+		_mc(DE, 1);
+		b += A;
+		flags.P = (BC != 0);
+		flags._3 = (b & 0x08) != 0;
+		flags._5 = (b & 0x02) != 0;
+		flags.N = flags.H = 0;
+		if (BC) {
+			_mc(DE, 1); _mc(DE, 1); _mc(DE, 1);
+			_mc(DE, 1); _mc(DE, 1);
+			PC -= 2;
+		}
+		DE++;
+		HL++;
 		break;
 	case 0xb1:
 		break;
 	case 0xb2:
+		_mc(IR, 1);
+		b = _inr(BC);
+		_sb(HL, b);
+		B--;
+		c = b + flags.C + 1;
+		flags.N = (c & 0x80) != 0;
+		flags.C = flags.H = (c < b);
+		flags.P = parity_table[(c & 0x07) ^ B];
+		_sz35(B);
+		if (B) {
+			_mc(HL, 1); _mc(HL, 1); _mc(HL, 1);
+			_mc(HL, 1); _mc(HL, 1);
+			PC -= 2;
+		}
+		HL++;
 		break;
 	case 0xb3:
 		break;
 	case 0xb8:
+		b = _rb(HL);
+		BC--;
+		_sb(DE, b);
+		_mc(DE, 1);
+		_mc(DE, 1);
+		b += A;
+		flags.P = (BC != 0);
+		flags._3 = (b & 0x08) != 0;
+		flags._5 = (b & 0x02) != 0;
+		flags.N = flags.H = 0;
+		if (BC) {
+			_mc(DE, 1); _mc(DE, 1); _mc(DE, 1);
+			_mc(DE, 1); _mc(DE, 1);
+			PC -= 2;
+		}
+		DE--;
+		HL--;
 		break;
 	case 0xb9:
 		break;
 	case 0xba:
+		_mc(IR, 1);
+		b = _inr(BC);
+		_sb(HL, b);
+		B--;
+		c = b + flags.C + 1;
+		flags.N = (c & 0x80) != 0;
+		flags.C = flags.H = (c < b);
+		flags.P = parity_table[(c & 0x07) ^ B];
+		_sz35(B);
+		if (B) {
+			_mc(HL, 1); _mc(HL, 1); _mc(HL, 1);
+			_mc(HL, 1); _mc(HL, 1);
+			PC -= 2;
+		}
+		HL--;
 		break;
 	case 0xbb:
 		break;

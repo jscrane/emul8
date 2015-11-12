@@ -155,13 +155,6 @@ private:
 		ts(i);
 	}
 
-	inline void _pc(word port, int i) {
-#if defined(CPU_DEBUG)
-		printf("%5d PC %04x\n", _ts, port);
-#endif
-		ts(i);
-	}
-
 	inline word _rw(Memory::address a) { 
 		return _rb(a) + (_rb(a+1) << 8); 
 	}
@@ -178,6 +171,12 @@ private:
 	}
 
 	inline void _swPC(word w) { _sw(_rw(PC), w); PC += 2; }
+
+	inline word _rwPC() {
+		word w = _rw(_rw(PC));
+		PC += 2;
+		return w;
+	}
 
 	inline void _35(byte r) {
 		flags._3 = ((r & 0x08) != 0);
@@ -215,6 +214,18 @@ private:
 		b = r;
 	}
 
+	inline void _add(byte x) {
+		word w = A + x;
+		byte b = A;
+		A = w & 0xff;
+		_sz35(A);
+		flags.C = w > 0xff;
+		flags.N = 0;
+		byte v = b ^ A ^ x;
+		flags.P = (v >> 7) ^ flags.C;
+		flags.H = (v >> 4) & 1;
+	}
+
 	inline void _add16(word &reg, word w) {
 		_mc(IR, 1); _mc(IR, 1); _mc(IR, 1);
 		_mc(IR, 1); _mc(IR, 1); _mc(IR, 1); _mc(IR, 1);
@@ -224,6 +235,30 @@ private:
 		flags.H = 1;
 		flags.N = 0;
 		_35(reg >> 8);
+	}
+
+	inline void _adc(byte x) {
+		word w = A + x + flags.C;
+		byte b = A;
+		A = w & 0xff;
+		_sz35(A);
+		flags.C = w > 0xff;
+		flags.N = 0;
+		byte v = b ^ A ^ x;
+		flags.P = (v >> 7) ^ flags.C;
+		flags.H = (v >> 4) & 1;
+	}
+
+	inline void _adc16(word &reg, word w) {
+		_mc(IR, 1); _mc(IR, 1); _mc(IR, 1);
+		_mc(IR, 1); _mc(IR, 1); _mc(IR, 1); _mc(IR, 1);
+		unsigned long r = reg + w + flags.C;
+		reg = (r & 0xffff);
+		_sz35(reg >> 8);
+		flags.Z = (reg == 0);
+		flags.C = (r > 0xffff);
+		flags.N = 0;
+		flags.H = 1;	// FIXME, flags P and H
 	}
 
 	inline void _incO(Memory::address a) {
@@ -280,6 +315,8 @@ private:
 		_push(reg); reg = w;
 		_mc(SP, 1); _mc(SP, 1);
 	}
+
+	inline void _neg() { byte b = A; A = 0; _sub(b); }
 
 	inline void _exch(word &a, word &b) { word t = b; b = a; a = t; }
 
@@ -357,7 +394,7 @@ private:
 	// 0x28
 	void jrz() { _jr(flags.Z); }
 	void addhlhl() { _add16(HL, HL); }
-	void ldhlPC() { HL = _rw(_rw(PC)); PC += 2; }
+	void ldhlPC() { HL = _rwPC(); }
 	void dechl() { HL--; _mc(IR, 1); _mc(IR, 1); }
 	void incl() { _inc(L); }
 	void decl() { _dec(L); }
@@ -465,17 +502,6 @@ private:
 	void ldaa() {}
 
 	// 0x80
-	inline void _add(byte x) {
-		word w = A + x;
-		byte b = A;
-		A = w & 0xff;
-		_sz35(A);
-		flags.C = w > 0xff;
-		flags.N = 0;
-		byte v = b ^ A ^ x;
-		flags.P = (v >> 7) ^ flags.C;
-		flags.H = (v >> 4) & 1;
-	}
 	void addab() { _add(B); }
 	void addac() { _add(C); }
 	void addad() { _add(D); }
@@ -486,17 +512,6 @@ private:
 	void addaa() { _add(A); }
 
 	// 0x88
-	inline void _adc(byte x) {
-		word w = A + x + flags.C;
-		byte b = A;
-		A = w & 0xff;
-		_sz35(A);
-		flags.C = w > 0xff;
-		flags.N = 0;
-		byte v = b ^ A ^ x;
-		flags.P = (v >> 7) ^ flags.C;
-		flags.H = (v >> 4) & 1;
-	}
 	void adcab() { _adc(B); }
 	void adcac() { _adc(C); }
 	void adcad() { _adc(D); }
