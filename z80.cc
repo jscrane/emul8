@@ -395,7 +395,7 @@ void z80::ed() {
 		_outr(BC, B);
 		break;
 	case 0x42:
-		_sbc16(HL, BC);
+		_sbc16(BC);
 		break;
 	case 0x43:
 		_swPC(BC);
@@ -440,7 +440,7 @@ void z80::ed() {
 		_outr(BC, C);
 		break;
 	case 0x4a:
-		_adc16(HL, BC);
+		_adc16(BC);
 		break;
 	case 0x4b:
 		BC = _rwPC();
@@ -457,7 +457,7 @@ void z80::ed() {
 		_outr(BC, D);
 		break;
 	case 0x52:
-		_sbc16(HL, DE);
+		_sbc16(DE);
 		break;
 	case 0x53:
 		_swPC(DE);
@@ -480,7 +480,7 @@ void z80::ed() {
 		_outr(BC, E);
 		break;
 	case 0x5a:
-		_adc16(HL, DE);
+		_adc16(DE);
 		break;
 	case 0x5b:
 		DE = _rwPC();
@@ -503,7 +503,7 @@ void z80::ed() {
 		_outr(BC, H);
 		break;
 	case 0x62:
-		_sbc16(HL, HL);
+		_sbc16(HL);
 		break;
 	case 0x63:
 		_swPC(HL);
@@ -524,7 +524,7 @@ void z80::ed() {
 		_outr(BC, L);
 		break;
 	case 0x6a:
-		_adc16(HL, HL);
+		_adc16(HL);
 		break;
 	case 0x6b:
 		HL = _rwPC();
@@ -545,7 +545,7 @@ void z80::ed() {
 		_outr(BC, 0);
 		break;
 	case 0x72:
-		_sbc16(HL, SP);
+		_sbc16(SP);
 		break;
 	case 0x73:
 		_swPC(SP);
@@ -557,7 +557,7 @@ void z80::ed() {
 		_outr(BC, A);
 		break;
 	case 0x7a:
-		_adc16(HL, SP);
+		_adc16(SP);
 		break;
 	case 0x7b:
 		SP = _rwPC();

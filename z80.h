@@ -251,18 +251,17 @@ private:
 		flags.H = (v >> 4) & 1;
 	}
 
-	inline void _adc16(word &reg, word w) {
+	inline void _adc16(word w) {
 		_mc(IR, 1); _mc(IR, 1); _mc(IR, 1);
 		_mc(IR, 1); _mc(IR, 1); _mc(IR, 1); _mc(IR, 1);
-		unsigned long r = reg + w + flags.C;
-		byte o = reg >> 8;
-		reg = (r & 0xffff);
-		byte h = reg >> 8;
-		_sz35(h);
-		flags.Z = (reg == 0);
+		unsigned long r = HL + w + flags.C;
+		byte h = H;
+		HL = (r & 0xffff);
+		_sz35(H);
+		flags.Z = (HL == 0);
 		flags.C = (r > 0xffff);
 		flags.N = 0;
-		byte v = o ^ h ^ (w >> 8);
+		byte v = h ^ H ^ (w >> 8);
 		flags.P = (v >> 7) ^ flags.C;
 		flags.H = (v >> 4) & 1;
 	}
@@ -286,8 +285,8 @@ private:
 		flags.C = 1;
 		_adc(~x);
 		flags.C = !flags.C;
+		flags.H = !flags.H;
 		flags.N = 1;
-		flags.H = (b & 0x0f) < (x & 0x0f);
 	}
 
 	inline void _sbc(byte x) {
@@ -295,18 +294,17 @@ private:
 		flags.C = !flags.C;
 		_adc(~x);
 		flags.C = !flags.C;
+		flags.H = !flags.H;
 		flags.N = 1;
-		flags.H = (b & 0x0f) < (x & 0x0f);
 	}
 
-	inline void _sbc16(word &reg, word w) {
-		word r = reg;
+	inline void _sbc16(word w) {
+		word r = HL;
 		flags.C = !flags.C;
-		_adc16(reg, ~w);
+		_adc16(~w);
 		flags.C = !flags.C;
+		flags.H = !flags.H;
 		flags.N = 1;
-		flags.H = ((r >> 8) & 0x0f) < ((w >> 8) & 0x0f);
-		flags.Z = (r == 0);
 	}
 
 	inline void _incO(Memory::address a) {
