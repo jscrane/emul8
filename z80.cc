@@ -377,6 +377,187 @@ void z80::_ddfd(word &ix, byte &ixL, byte &ixH, OP_IDX ops[]) {
 }
 
 void z80::ed() {
+	_mc(PC, 4);
+	byte op = _mem[PC];
+#if defined(CPU_DEBUG)
+	printf("%5d MR %04x %02x\n", _ts, PC, op);
+#endif
+	PC++;
+	R++;
+	switch (op) {
+	case 0x40:
+		B = _inr(BC);
+		break;
+	case 0x41:
+		_outr(BC, B);
+		break;
+	case 0x42:
+		break;
+	case 0x43:
+		break;
+	case 0x44:
+		break;
+	case 0x45:
+		break;
+	case 0x46:
+		break;
+	case 0x47:
+		break;
+	case 0x48:
+		C = _inr(BC);
+		break;
+	case 0x49:
+		_outr(BC, C);
+		break;
+	case 0x4a:
+		break;
+	case 0x4b:
+		break;
+	case 0x4c:
+		break;
+	case 0x4d:
+		break;
+	case 0x4e:
+		break;
+	case 0x4f:
+		break;
+	case 0x50:
+		D = _inr(BC);
+		break;
+	case 0x51:
+		_outr(BC, D);
+		break;
+	case 0x52:
+		break;
+	case 0x53:
+		break;
+	case 0x54:
+		break;
+	case 0x55:
+		break;
+	case 0x56:
+		break;
+	case 0x57:
+		break;
+	case 0x58:
+		E = _inr(BC);
+		break;
+	case 0x59:
+		_outr(BC, E);
+		break;
+	case 0x5a:
+		break;
+	case 0x5b:
+		break;
+	case 0x5c:
+		break;
+	case 0x5d:
+		break;
+	case 0x5e:
+		break;
+	case 0x5f:
+		break;
+	case 0x60:
+		H = _inr(BC);
+		break;
+	case 0x61:
+		_outr(BC, H);
+		break;
+	case 0x62:
+		break;
+	case 0x63:
+		break;
+	case 0x64:
+		break;
+	case 0x65:
+		break;
+	case 0x66:
+		break;
+	case 0x67:
+		break;
+	case 0x68:
+		L = _inr(BC);
+		break;
+	case 0x69:
+		_outr(BC, L);
+		break;
+	case 0x6a:
+		break;
+	case 0x6b:
+		break;
+	case 0x6c:
+		break;
+	case 0x6d:
+		break;
+	case 0x6e:
+		break;
+	case 0x6f:
+		_inr(BC);
+		break;
+	case 0x70:
+		_outr(BC, 0);
+		break;
+	case 0x71:
+		break;
+	case 0x72:
+		break;
+	case 0x73:
+		break;
+	case 0x74:
+		break;
+	case 0x75:
+		break;
+	case 0x76:
+		break;
+	case 0x78:
+		A = _inr(BC);
+		break;
+	case 0x79:
+		_outr(BC, A);
+		break;
+	case 0x7a:
+		break;
+	case 0x7b:
+		break;
+	case 0x7c:
+		break;
+	case 0x7d:
+		break;
+	case 0x7e:
+		break;
+	case 0xa0:
+		break;
+	case 0xa1:
+		break;
+	case 0xa2:
+		break;
+	case 0xa3:
+		break;
+	case 0xa8:
+		break;
+	case 0xa9:
+		break;
+	case 0xaa:
+		break;
+	case 0xab:
+		break;
+	case 0xb0:
+		break;
+	case 0xb1:
+		break;
+	case 0xb2:
+		break;
+	case 0xb3:
+		break;
+	case 0xb8:
+		break;
+	case 0xb9:
+		break;
+	case 0xba:
+		break;
+	case 0xbb:
+		break;
+	}
 }
 
 int z80::parity_table[] = {

@@ -4,8 +4,8 @@
 template<class P>
 class PortDevice {
 public:
-	virtual void out(byte p, byte v, P *cpu) =0;
-	virtual byte in(byte p, P *cpu) =0;
+	virtual void out(word p, byte v, P *cpu) =0;
+	virtual byte in(word p, P *cpu) =0;
 };
 
 #endif

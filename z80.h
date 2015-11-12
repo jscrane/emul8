@@ -155,7 +155,7 @@ private:
 		ts(i);
 	}
 
-	inline void _pc(byte port, int i) {
+	inline void _pc(word port, int i) {
 #if defined(CPU_DEBUG)
 		printf("%5d PC %04x\n", _ts, port);
 #endif
@@ -628,7 +628,10 @@ private:
 	void retnc() { _ret(!flags.C); }
 	void popde() { DE = _pop(); }
 	void jpnc() { _jmp(!flags.C); }
-	void outa() { byte p = _rb(PC++); _pc(p, 1); _ports->out(p, A, this); _pc(p, 3); }
+	void outa() {
+		word p = _rb(PC++) + (A << 8);
+		_ports->out(p, A, this);
+	}
 	void callnc() { _call(!flags.C); }
 	void pushde() { _mc(IR, 1); _push(DE); }
 	void suba() { _sub(_rb(PC++)); }
@@ -638,7 +641,10 @@ private:
 	void retc() { _ret(flags.C); }
 	void exx() { _exch(BC, BC_); _exch(DE, DE_); _exch(HL, HL_); }
 	void jpc() { _jmp(flags.C); }
-	void ina() { byte p = _rb(PC++); _pc(p, 1); A = _ports->in(p, this); _pc(p, 3); }
+	void ina() {
+		word p = _rb(PC++) + (A << 8);
+		A = _ports->in(p, this);
+	}
 	void callc() { _call(flags.C); }
 	void dd() { _ddfd(IX, IXL, IXH, _ddcb); }
 	void sbca() { _sbc(_rb(PC++)); }
@@ -655,6 +661,15 @@ private:
 	void rst20() { _mc(IR, 1); _push(PC); PC = 0x20; }
 
 	// 0xe8
+	inline byte _inr(word p) {
+		byte b = _ports->in(p, this);
+		_szp35(b);
+		return b;
+	}
+	inline void _outr(word p, byte b) {
+		_ports->out(p, b, this);
+	}
+
 	void retpe() { _ret(flags.P); }
 	void jphl() { PC = HL; }
 	void jppe() { _jmp(flags.P); }
