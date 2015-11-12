@@ -586,7 +586,7 @@ void z80::ed() {
 		flags.N = 1;
 		flags.P = (BC != 0);
 		flags.Z = (c == 0);
-		flags.S = (c & 0x80);
+		flags.S = (c & 0x80) != 0;
 		// FIXME: flags 3, 5, H
 		break;
 	case 0xa2:
@@ -637,7 +637,9 @@ void z80::ed() {
 		flags.N = 1;
 		flags.P = (BC != 0);
 		flags.Z = (c == 0);
-		flags.S = (c & 0x80);
+		flags.S = (c & 0x80) != 0;
+		flags._3 = (c & 0x08) != 0;
+		flags._5 = (c & 0x02) != 0;
 		// FIXME: flags 3, 5, H
 		break;
 	case 0xaa:
@@ -692,8 +694,10 @@ void z80::ed() {
 		flags.N = 1;
 		flags.P = (BC != 0);
 		flags.Z = (c == 0);
-		flags.S = (c & 0x80);
+		flags.S = (c & 0x80) != 0;
 		// FIXME: flags 3, 5, H
+		flags._3 = (c & 0x08) != 0;
+		flags._5 = (c & 0x02) != 0;
 		if (!flags.Z) {
 			_mc(HL, 1); _mc(HL, 1); _mc(HL, 1);
 			_mc(HL, 1); _mc(HL, 1);
@@ -763,7 +767,7 @@ void z80::ed() {
 		flags.N = 1;
 		flags.P = (BC != 0);
 		flags.Z = (c == 0);
-		flags.S = (c & 0x80);
+		flags.S = (c & 0x80) != 0;
 		// FIXME: flags 3, 5, H
 		if (BC) {
 			_mc(HL, 1); _mc(HL, 1); _mc(HL, 1);

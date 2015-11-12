@@ -278,7 +278,6 @@ private:
 		flags.C = (r > 0xffff);
 		flags.N = 0;
 		byte v = o ^ h ^ (w >> 8);
-		flags.P = (v >> 7) ^ flags.C;
 		flags.H = (v >> 4) & 1;
 	}
 
@@ -307,6 +306,7 @@ private:
 		flags.C = !flags.C;
 		flags.N = 1;
 		flags.H = ((r >> 8) & 0x0f) < ((w >> 8) & 0x0f);
+		flags.Z = (r == 0);
 	}
 
 	inline void _incO(Memory::address a) {
@@ -820,7 +820,7 @@ private:
 
 	// 0x20
 	inline void _sla(byte &b) {
-		if (b & 0x80) flags.C = 1;
+		flags.C = (b & 0x80) != 0;
 		b <<= 1;
 		_szp35(b);
 		flags.N = flags.H = 0;
@@ -854,7 +854,7 @@ private:
 
 	// 0x30
 	inline void _sll(byte &b) {
-		if (b & 0x80) flags.C = 1;
+		flags.C = (b & 0x80) != 0;
 		b = (b << 1) | 0x01;
 		_szp35(b);
 		flags.N = flags.H = 0;
