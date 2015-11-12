@@ -25,6 +25,7 @@ public:
 	inline word de() { return DE; }
 	inline word hl() { return HL; }
 	inline byte sr() { return F; }
+	inline byte i() { return I; }
 	inline byte r() { return R; }
 	inline word af_() { return AF_; }
 	inline word bc_() { return BC_; }
@@ -35,6 +36,9 @@ public:
 	inline word sp() { return SP; }
 	inline word pc() { return PC; }
 	inline bool halted() { return _halted; }
+	inline bool iff1() { return _iff1; }
+	inline bool iff2() { return _iff2; }
+	inline byte im() { return _im; }
 
 	inline void af(word w) { AF = w; }
 	inline void bc(word w) { BC = w; }
@@ -48,6 +52,12 @@ public:
 	inline void bc_(word w) { BC_ = w; }
 	inline void de_(word w) { DE_ = w; }
 	inline void hl_(word w) { HL_ = w; }
+
+	inline void i(byte i) { I = i; }
+	inline void r(byte r) { R = r; }
+	inline void iff1(byte iff1) { _iff1 = iff1 != 0; }
+	inline void iff2(byte iff2) { _iff2 = iff2 != 0; }
+	inline void im(byte im) { _im = im; }
 
 	inline unsigned long ts() { return _ts; }
 	inline void ts(int t) { _ts += t; }
@@ -114,6 +124,9 @@ private:
 		struct { byte R, I; };
 		word IR;
 	};
+
+	byte _im;
+	bool _iff1, _iff2;
 
 	unsigned long _ts;
 	bool _halted;
@@ -315,8 +328,6 @@ private:
 		_push(reg); reg = w;
 		_mc(SP, 1); _mc(SP, 1);
 	}
-
-	inline void _neg() { byte b = A; A = 0; _sub(b); }
 
 	inline void _exch(word &a, word &b) { word t = b; b = a; a = t; }
 
@@ -679,6 +690,7 @@ private:
 	inline byte _inr(word p) {
 		byte b = _ports->in(p, this);
 		_szp35(b);
+		flags.N = flags.H = 0;
 		return b;
 	}
 	inline void _outr(word p, byte b) {
@@ -698,7 +710,7 @@ private:
 	void retp() { _ret(!flags.S); }
 	void popaf() { AF = _pop(); }
 	void jpp() { _jmp(!flags.S); }
-	void di() { /* FIXME */ }
+	void di() { _iff1 = _iff2 = false; }
 	void callp() { _call(!flags.S); }
 	void pushaf() { _mc(IR, 1); _push(AF); }
 	void or() { _or(_rb(PC++)); }

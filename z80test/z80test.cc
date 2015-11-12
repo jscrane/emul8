@@ -95,7 +95,9 @@ int read_test(FILE *f, z80 &z, Memory &m) {
 		fprintf(stderr, "second registers' line corrupt\n");
 		return -1;
 	}
-	// FIXME: use the register values read
+	z.i(i);		z.r(r);
+	z.iff1(iff1);	z.iff2(iff2);
+	z.im(im);
 
 	for (;;) {
 		if (fscanf(f, "%x", &address) != 1) {
@@ -126,8 +128,8 @@ void dump_cpu_state(z80 &z) {
 	printf("%04x %04x %04x %04x %04x %04x %04x %04x %04x %04x %04x %04x\n",
 		z.af(), z.bc(), z.de(), z.hl(), z.af_(), z.bc_(), z.de_(), 
 		z.hl_(), z.ix(), z.iy(), z.sp(), z.pc());
-	// FIXME
-	printf("00 %02x 0 0 0 %d %d\n", z.r() & 0x7f, z.halted(), z.ts());
+	printf("%02x %02x %d %d %d %d %d\n",
+		z.i(), z.r(), z.iff1(), z.iff2(), z.im(), z.halted(), z.ts());
 //	printf("%02x %02x %d %d %d %d %d\n", I, (R7 & 0x80) | (R & 0x7f),
 //		IFF1, IFF2, IM, z80.halted, tstates);
 }

@@ -29,6 +29,8 @@ void z80::reset() {
 	AF = BC = DE = HL = PC = SP = 0;
 	AF_ = BC_ = DE_ = HL_ = IX = IY = 0;
 	I = R = 0;
+	_im = 0;
+	_iff1 = _iff2 = false;
 	_irq_pending = 0;
 	_ts = 0;
 	_halted = false;
@@ -47,6 +49,7 @@ void z80::raise(int level) {
 }
 
 void z80::ei() {
+	_iff1 = _iff2 = true;
 /* FIXME: interrupts
 	flags.I = 1;
 	if (_irq_pending)
@@ -404,13 +407,30 @@ void z80::ed() {
 	case 0x5c:
 	case 0x6c:
 	case 0x7c:
-		_neg();
+		b = A;
+		A = 0;
+		_sub(b);
 		break;
 	case 0x45:
+	case 0x4d:
+	case 0x55:
+	case 0x5d:
+	case 0x65:
+	case 0x6d:
+	case 0x75:
+	case 0x7d:
+		_iff1 = _iff2;
+		ret();
 		break;
 	case 0x46:
+	case 0x4e:
+	case 0x66:
+	case 0x6e:
+		_im = 0;
 		break;
 	case 0x47:
+		_mc(IR, 1);
+		I = A;
 		break;
 	case 0x48:
 		C = _inr(BC);
@@ -424,11 +444,10 @@ void z80::ed() {
 	case 0x4b:
 		BC = _rwPC();
 		break;
-	case 0x4d:
-		break;
-	case 0x4e:
-		break;
 	case 0x4f:
+		_mc(IR, 1);
+		R = A;
+		// FIXME?
 		break;
 	case 0x50:
 		D = _inr(BC);
@@ -441,11 +460,16 @@ void z80::ed() {
 	case 0x53:
 		_swPC(DE);
 		break;
-	case 0x55:
-		break;
 	case 0x56:
+	case 0x76:
+		_im = 1;
 		break;
 	case 0x57:
+		_mc(IR, 1);
+		A = I;
+		_sz35(A);
+		flags.P = _iff2;
+		flags.H = flags.N = 0;
 		break;
 	case 0x58:
 		E = _inr(BC);
@@ -459,11 +483,16 @@ void z80::ed() {
 	case 0x5b:
 		DE = _rwPC();
 		break;
-	case 0x5d:
-		break;
 	case 0x5e:
+	case 0x7e:
+		_im = 2;
 		break;
 	case 0x5f:
+		_mc(IR, 1);
+		A = R;
+		_sz35(A);
+		flags.P = _iff2;
+		flags.H = flags.N = 0;
 		break;
 	case 0x60:
 		H = _inr(BC);
@@ -476,11 +505,14 @@ void z80::ed() {
 	case 0x63:
 		_swPC(HL);
 		break;
-	case 0x65:
-		break;
-	case 0x66:
-		break;
 	case 0x67:
+		b = _rb(HL);
+		_mc(HL, 1); _mc(HL, 1);
+		_mc(HL, 1); _mc(HL, 1);
+		_sb(HL, (A << 4) | (b >> 4));
+		A = (A & 0xf0) | (b & 0x0f);
+		_szp35(A);
+		flags.H = flags.N = 0;
 		break;
 	case 0x68:
 		L = _inr(BC);
@@ -494,26 +526,25 @@ void z80::ed() {
 	case 0x6b:
 		HL = _rwPC();
 		break;
-	case 0x6d:
-		break;
-	case 0x6e:
-		break;
 	case 0x6f:
-		_inr(BC);
+		b = _rb(HL);
+		_mc(HL, 1); _mc(HL, 1);
+		_mc(HL, 1); _mc(HL, 1);
+		_sb(HL, (A & 0x0f) | (b << 4));
+		A = (A & 0xf0) | (b >> 4);
+		_szp35(A);
+		flags.N = flags.H = 0;
 		break;
 	case 0x70:
-		_outr(BC, 0);
+		_inr(BC);
 		break;
 	case 0x71:
+		_outr(BC, 0);
 		break;
 	case 0x72:
 		break;
 	case 0x73:
 		_swPC(SP);
-		break;
-	case 0x75:
-		break;
-	case 0x76:
 		break;
 	case 0x78:
 		A = _inr(BC);
@@ -526,10 +557,6 @@ void z80::ed() {
 		break;
 	case 0x7b:
 		SP = _rwPC();
-		break;
-	case 0x7d:
-		break;
-	case 0x7e:
 		break;
 	case 0xa0:
 		b = _rb(HL);
@@ -546,6 +573,17 @@ void z80::ed() {
 		flags.N = flags.H = 0;
 		break;
 	case 0xa1:
+		b = _rb(HL);
+		c = A - b;
+		_mc(HL, 1); _mc(HL, 1); _mc(HL, 1);
+		_mc(HL, 1); _mc(HL, 1);
+		HL++;
+		BC--;
+		flags.N = 1;
+		flags.P = (BC != 0);
+		flags.Z = (c == 0);
+		flags.S = (c & 0x80);
+		// FIXME: flags 3, 5, H
 		break;
 	case 0xa2:
 		_mc(IR, 1);
@@ -553,13 +591,23 @@ void z80::ed() {
 		_sb(HL, b);
 		B--;
 		HL++;
-		c = b + flags.C + 1;
-		flags.N = (c & 0x80) != 0;
+		c = b + C + 1;
+		flags.N = (b & 0x80) != 0;
 		flags.C = flags.H = (c < b);
 		flags.P = parity_table[(c & 0x07) ^ B];
 		_sz35(B);
 		break;
 	case 0xa3:
+		_mc(IR, 1);
+		b = _rb(HL);
+		B--;
+		_outr(BC, b);
+		HL++;
+		c = b + L;
+		flags.N = (b & 0x80) != 0;
+		flags.C = flags.H = (c < b);
+		flags.P = parity_table[(c & 0x07) ^ B];
+		_sz35(B);
 		break;
 	case 0xa8:
 		b = _rb(HL);
@@ -576,6 +624,17 @@ void z80::ed() {
 		flags.N = flags.H = 0;
 		break;
 	case 0xa9:
+		b = _rb(HL);
+		c = A - b;
+		_mc(HL, 1); _mc(HL, 1); _mc(HL, 1);
+		_mc(HL, 1); _mc(HL, 1);
+		HL--;
+		BC--;
+		flags.N = 1;
+		flags.P = (BC != 0);
+		flags.Z = (c == 0);
+		flags.S = (c & 0x80);
+		// FIXME: flags 3, 5, H
 		break;
 	case 0xaa:
 		_mc(IR, 1);
@@ -583,13 +642,23 @@ void z80::ed() {
 		_sb(HL, b);
 		B--;
 		HL--;
-		c = b + flags.C + 1;
-		flags.N = (c & 0x80) != 0;
+		c = b + C - 1;
+		flags.N = (b & 0x80) != 0;
 		flags.C = flags.H = (c < b);
 		flags.P = parity_table[(c & 0x07) ^ B];
 		_sz35(B);
 		break;
 	case 0xab:
+		_mc(IR, 1);
+		b = _rb(HL);
+		B--;
+		_outr(BC, b);
+		HL--;
+		c = b + L;
+		flags.N = (b & 0x80) != 0;
+		flags.C = flags.H = (c < b);
+		flags.P = parity_table[(c & 0x07) ^ B];
+		_sz35(B);
 		break;
 	case 0xb0:
 		b = _rb(HL);
@@ -611,6 +680,22 @@ void z80::ed() {
 		HL++;
 		break;
 	case 0xb1:
+		b = _rb(HL);
+		c = A - b;
+		_mc(HL, 1); _mc(HL, 1); _mc(HL, 1);
+		_mc(HL, 1); _mc(HL, 1);
+		BC--;
+		flags.N = 1;
+		flags.P = (BC != 0);
+		flags.Z = (c == 0);
+		flags.S = (c & 0x80);
+		// FIXME: flags 3, 5, H
+		if (!flags.Z) {
+			_mc(HL, 1); _mc(HL, 1); _mc(HL, 1);
+			_mc(HL, 1); _mc(HL, 1);
+			PC -= 2;
+		}
+		HL++;
 		break;
 	case 0xb2:
 		_mc(IR, 1);
@@ -630,6 +715,21 @@ void z80::ed() {
 		HL++;
 		break;
 	case 0xb3:
+		_mc(IR, 1);
+		b = _rb(HL);
+		B--;
+		_outr(BC, b);
+		HL++;
+		c = b + L;
+		flags.N = (b & 0x80) != 0;
+		flags.C = flags.H = (c < b);
+		flags.P = parity_table[(c & 0x07) ^ B];
+		_sz35(B);
+		if (B) {
+			_mc(BC, 1); _mc(BC, 1); _mc(BC, 1);
+			_mc(BC, 1); _mc(BC, 1);
+			PC -= 2;
+		}
 		break;
 	case 0xb8:
 		b = _rb(HL);
@@ -651,6 +751,22 @@ void z80::ed() {
 		HL--;
 		break;
 	case 0xb9:
+		b = _rb(HL);
+		c = A - b;
+		_mc(HL, 1); _mc(HL, 1); _mc(HL, 1);
+		_mc(HL, 1); _mc(HL, 1);
+		BC--;
+		flags.N = 1;
+		flags.P = (BC != 0);
+		flags.Z = (c == 0);
+		flags.S = (c & 0x80);
+		// FIXME: flags 3, 5, H
+		if (BC) {
+			_mc(HL, 1); _mc(HL, 1); _mc(HL, 1);
+			_mc(HL, 1); _mc(HL, 1);
+			PC -= 2;
+		}
+		HL--;
 		break;
 	case 0xba:
 		_mc(IR, 1);
@@ -670,6 +786,21 @@ void z80::ed() {
 		HL--;
 		break;
 	case 0xbb:
+		_mc(IR, 1);
+		b = _rb(HL);
+		B--;
+		_outr(BC, b);
+		HL--;
+		c = b + L;
+		flags.N = (b & 0x80) != 0;
+		flags.C = flags.H = (c < b);
+		flags.P = parity_table[(c & 0x07) ^ B];
+		_sz35(B);
+		if (B) {
+			_mc(BC, 1); _mc(BC, 1); _mc(BC, 1);
+			_mc(BC, 1); _mc(BC, 1);
+			PC -= 2;
+		}
 		break;
 	}
 }
