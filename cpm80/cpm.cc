@@ -19,11 +19,11 @@ byte seldsk, settrk, setsec, trk = 0xff, sec = 0xff;
 word setdma;
 WINDOW *mainwin;
 
-class Ports: public PortDevice {
+class Ports: public PortDevice<i8080> {
 public:
 	Ports(Memory &mem): _mem(mem) {}
 
-	void out(byte port, byte a, i8080 *cpu) {
+	void out(word port, byte a, i8080 *cpu) {
 		if (port == 4)
 			write(1, &a, 1);
 		else if (port == 20) {
@@ -41,7 +41,7 @@ public:
 		}
 	}
 
-	byte in(byte port, i8080 *cpu) { 
+	byte in(word port, i8080 *cpu) { 
 		byte c = 0;
 		if (port == 4) {
 			read(0, &c, 1);

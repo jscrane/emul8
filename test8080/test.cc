@@ -14,11 +14,11 @@
 // http://www.mccm.hetlab.tk/millennium/milc/disk/topic_18.htm
 // The function number is in register C: 2 for char output or 9 for string
 
-class Ports: public PortDevice {
+class Ports: public PortDevice<i8080> {
 public:
 	Ports(Memory &mem): _mem(mem) {}
 
-	void out(byte port, byte a, i8080 *cpu) {
+	void out(word port, byte a, i8080 *cpu) {
 		if (port == 0) {
 			if (a == 2)
 				putchar(cpu->e());
@@ -31,7 +31,7 @@ public:
 			}
 		}
 	}
-	byte in(byte port, i8080 *) { return 0; }
+	byte in(word port, i8080 *) { return 0; }
 private:
 	Memory &_mem;
 };
