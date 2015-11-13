@@ -381,7 +381,7 @@ void z80::_ddfd(word &ix, byte &ixL, byte &ixH, OP_IDX ops[]) {
 
 void z80::ed() {
 	_mc(PC, 4);
-	byte op = _mem[PC], b, c;
+	byte op = _mem[PC], b, c, f;
 #if defined(CPU_DEBUG)
 	printf("%5d MR %04x %02x\n", _ts, PC, op);
 #endif
@@ -578,16 +578,20 @@ void z80::ed() {
 		break;
 	case 0xa1:
 		b = _rb(HL);
-		c = A - b;
 		_mc(HL, 1); _mc(HL, 1); _mc(HL, 1);
 		_mc(HL, 1); _mc(HL, 1);
+		c = A;
+		f = (flags.C != 0);
+		_sub(b);
 		HL++;
 		BC--;
-		flags.N = 1;
+		b = A;
+		A = c;
+		if (flags.H) b--;
+		flags.C = f;
 		flags.P = (BC != 0);
-		flags.Z = (c == 0);
-		flags.S = (c & 0x80) != 0;
-		// FIXME: flags 3, 5, H
+		flags._3 = (b & 0x08) != 0;
+		flags._5 = (b & 0x02) != 0;
 		break;
 	case 0xa2:
 		_mc(IR, 1);
@@ -687,17 +691,19 @@ void z80::ed() {
 		break;
 	case 0xb1:
 		b = _rb(HL);
-		c = A - b;
 		_mc(HL, 1); _mc(HL, 1); _mc(HL, 1);
 		_mc(HL, 1); _mc(HL, 1);
+		c = A;
+		f = (flags.C != 0);
+		_sub(b);
 		BC--;
-		flags.N = 1;
+		b = A;
+		A = c;
+		flags.C = f;
 		flags.P = (BC != 0);
-		flags.Z = (c == 0);
-		flags.S = (c & 0x80) != 0;
-		// FIXME: flags 3, 5, H
-		flags._3 = (c & 0x08) != 0;
-		flags._5 = (c & 0x02) != 0;
+		if (flags.H) b--;
+		flags._3 = (b & 0x08) != 0;
+		flags._5 = (b & 0x02) != 0;
 		if (!flags.Z) {
 			_mc(HL, 1); _mc(HL, 1); _mc(HL, 1);
 			_mc(HL, 1); _mc(HL, 1);
