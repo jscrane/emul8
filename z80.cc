@@ -9,7 +9,7 @@
 			PC, op, A, BC, DE, HL, SP, flags.S, flags.Z,\
 			flags._5, flags.H, flags._3, flags.P, flags.N, flags.C
 
-void z80::_step(OP ops[]) {
+byte z80::_fetch_op() {
 	_mc(PC, 4);
 	byte op = _mem[PC];
 #if defined(CPU_DEBUG)
@@ -17,7 +17,7 @@ void z80::_step(OP ops[]) {
 #endif
 	PC++;
 	R++;
-	(this->*ops[op])();
+	return op;
 }
 
 void z80::run(unsigned clocks) {
@@ -108,14 +108,7 @@ void z80::_step_idx(OP_IDX ops[]) {
 }
 
 void z80::_ddfd(word &ix, byte &ixL, byte &ixH, OP_IDX ops[]) {
-	_mc(PC, 4);
-	byte op = _mem[PC];
-#if defined(CPU_DEBUG)
-	printf("%5d MR %04x %02x\n", _ts, PC, op);
-#endif
-	PC++;
-	R++;
-	switch (op) {
+	switch (_fetch_op()) {
 	case 0x09:
 		_add16(ix, BC);
 		break;
@@ -380,14 +373,8 @@ void z80::_ddfd(word &ix, byte &ixL, byte &ixH, OP_IDX ops[]) {
 }
 
 void z80::ed() {
-	_mc(PC, 4);
-	byte op = _mem[PC], b, c, f;
-#if defined(CPU_DEBUG)
-	printf("%5d MR %04x %02x\n", _ts, PC, op);
-#endif
-	PC++;
-	R++;
-	switch (op) {
+	byte b, c, f;
+	switch (_fetch_op()) {
 	case 0x40:
 		B = _inr(BC);
 		break;

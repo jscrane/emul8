@@ -66,7 +66,9 @@ private:
 	typedef void (z80::*OP)(); 
 	void _step(OP ops[]);
 
-	inline void step() { _step(_ops); }
+	byte _fetch_op();
+
+	inline void step() { (this->*_ops[_fetch_op()])(); }
 
 	typedef void (z80::*OP_IDX)(byte); 
 	void _step_idx(OP_IDX ops[]);
@@ -661,7 +663,7 @@ private:
 	void retz() { _ret(flags.Z); }
 	void ret() { PC = _pop(); }
 	void jpz() { _jmp(flags.Z); }
-	void cb() { _step(_cb); }
+	void cb() { (this->*_cb[_fetch_op()])(); }
 	void callz() { _call(flags.Z); }
 	void call() { word pc = _rw(PC); _mc(PC+1, 1); _push(PC+2); PC = pc; }
 	void adca() { _adc(_rb(PC++)); }
