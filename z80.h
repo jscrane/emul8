@@ -10,7 +10,7 @@ public:
 
 	void run(unsigned);
 	void reset();
-	void raise(int);
+	void raise(int level) { _irq_pending = level; }
 	char *status();
 
 	inline byte a() { return A; }
@@ -63,6 +63,8 @@ public:
 	inline void ts(int t) { _ts += t; }
 
 private:
+	void _handle_interrupt();
+
 	typedef void (z80::*OP)(); 
 	void _step(OP ops[]);
 
@@ -739,7 +741,7 @@ private:
 	void retm() { _ret(flags.S); }
 	void ldsphl() { _mc(IR, 1); _mc(IR, 1); SP = HL; }
 	void jpm() { _jmp(flags.S); }
-	void ei();
+	void ei() { _iff1 = _iff2 = true; }
 	void callm() { _call(flags.S); }
 	void fd() { _ddfd(IY, IYL, IYH, _fdcb); }
 	void cp() { _cmp(_rb(PC++)); }

@@ -9,6 +9,13 @@
 			PC, op, A, BC, DE, HL, SP, flags.S, flags.Z,\
 			flags._5, flags.H, flags._3, flags.P, flags.N, flags.C
 
+char *z80::status() {
+	static char buf[128];
+	byte op = _mem[PC];
+	sprintf(buf, "_pc_ op aa _bc_ _de_ _hl_ _sp_ szih_p_c\r\n" CPU_STATE_FMT);
+	return buf;
+}
+
 byte z80::_fetch_op() {
 	_mc(PC, 4);
 	byte op = _mem[PC];
@@ -21,8 +28,17 @@ byte z80::_fetch_op() {
 }
 
 void z80::run(unsigned clocks) {
-	while (clocks--)
+	while (clocks--) {
 		step();
+#if !defined(CPU_DEBUG)
+		if (_halted) {
+			_status("CPU halted at %04x\r\n%s", PC, status());
+			longjmp(*_err, 1);
+		}
+#endif
+		if (_irq_pending && _iff1)
+			_handle_interrupt();
+	}
 }
 
 void z80::reset() {
@@ -36,32 +52,22 @@ void z80::reset() {
 	_halted = false;
 }
 
-void z80::raise(int level) {
-/* FIXME: interrupts
-	if (flags.I) {
-		flags.I = 0;
-		_irq_pending = 0;
-		_push(PC);
-		PC = level * 8;
-	} else
-		_irq_pending = level;
-*/
-}
-
-void z80::ei() {
-	_iff1 = _iff2 = true;
-/* FIXME: interrupts
-	flags.I = 1;
-	if (_irq_pending)
-		raise(_irq_pending);
-*/
-}
-
-char *z80::status() {
-	static char buf[128];
-	byte op = _mem[PC];
-	sprintf(buf, "_pc_ op aa _bc_ _de_ _hl_ _sp_ szih_p_c\r\n" CPU_STATE_FMT);
-	return buf;
+void z80::_handle_interrupt() {
+	_iff1 = false;
+	_push(PC);
+	if (_irq_pending < 0) {	// NMI
+		PC = 0x0066;
+		ts(11);
+	} else {
+		_iff2 = false;
+		R++;
+		if (_im == 0 || _im == 1)
+			PC = 0x0038;
+		else if (_im == 2)
+			PC = _rw(_irq_pending + (0x100 * I));
+		ts(7);
+	}
+	_irq_pending = 0;
 }
 
 void z80::daa() {
@@ -79,13 +85,6 @@ void z80::daa() {
 	flags.C = c;
 	flags.P = parity_table[A];
 }
-
-/* FIXME?
-void z80::halt() {
-	_status("CPU halted at %04x\r\n%s", (PC-1), status());
-	longjmp(*_err, 1);
-}
-*/
 
 void z80::_step_idx(OP_IDX ops[]) {
 
