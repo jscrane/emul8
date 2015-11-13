@@ -25,8 +25,11 @@ Running the emulator
 --------------------
 The LD_LIBRARY_PATH environment variable must contain the shared objects' 
 location, e.g., if the emulator is to be executed in situ:
+
+```bash
 $ export LD_LIBRARY_PATH=$OS-$MACHINE:$LD_LIBRARY_PATH
 $ ./tk-emul8 uk101
+```
 
 The emulator takes an optional parameter naming either an initial 
 configuration (uk101/mon02.tcl) or a directory containing a file
