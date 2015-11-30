@@ -87,8 +87,8 @@ rom::Builder::Builder (): _prom(strdup ("new_prom")) {
 	Tcl_Interp *i = getInterp ();
 	if (TCL_OK == Tcl_EvalFile (i, TCL"prom.tcl"))
 		Tcl_CreateCommand (i, "prom", Prom, this, 0);
-	else
-		fprintf (stderr, "Tcl_Eval returns: %s\n", i->result);
+//	else
+//		fprintf (stderr, "Tcl_Eval returns: %s\n", i->result);
 }
 
 rom::Builder::~Builder () {

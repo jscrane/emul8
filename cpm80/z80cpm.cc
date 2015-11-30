@@ -11,7 +11,7 @@
 #include "memory.h"
 #include "ports.h"
 #include "cpu.h"
-#include "i8080.h"
+#include "z80.h"
 #include "ram.h"
 
 int dsk[4];
@@ -19,11 +19,12 @@ byte seldsk, settrk, setsec, trk = 0xff, sec = 0xff;
 word setdma;
 WINDOW *mainwin;
 
-class Ports: public PortDevice<i8080> {
+class Ports: public PortDevice<z80> {
 public:
 	Ports(Memory &mem): _mem(mem) {}
 
-	void out(word port, byte a, i8080 *cpu) {
+	void out(word portw, byte a, z80 *cpu) {
+		byte port = portw & 0xff;
 		if (port == 4)
 			write(1, &a, 1);
 		else if (port == 20) {
@@ -41,7 +42,8 @@ public:
 		}
 	}
 
-	byte in(word port, i8080 *cpu) { 
+	byte in(word portw, z80 *cpu) { 
+		byte port = portw & 0xff;
 		byte c = 0;
 		if (port == 4) {
 			read(0, &c, 1);
@@ -171,7 +173,7 @@ int main(int argc, char *argv[])
 
 	jmp_buf ex;
 	Ports ports(memory);
-	i8080 cpu(memory, ex, status, ports);
+	z80 cpu(memory, ex, status, ports);
 	cpu.reset();
 	if (dbg)
 		cpu.debug();

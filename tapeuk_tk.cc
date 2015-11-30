@@ -97,7 +97,7 @@ bool tape::Builder::build (Memory *m, int ac, const char **av) {
 	Tcl_CreateCommand (i, "tape", Tape, t, 0);
 	if (TCL_OK == Tcl_EvalFile (i, TCL"tape.tcl"))
 		return true;
-	fprintf (stderr, "Tcl_Eval returns: %s\n", i->result);
+//	fprintf (stderr, "Tcl_Eval returns: %s\n", i->result);
 	return false;
 }
 

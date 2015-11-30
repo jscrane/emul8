@@ -11,23 +11,27 @@ class TkDisplay: public display {
 public:
 	TkDisplay (int r, int c, char *s, Tcl_Interp *i): display(r, c), 
 	_r(r), _c(c), _s(strdup (s)), _i(i) {
-		if (TCL_OK != Tcl_EvalFile (_i, TCL"display.tcl"))
-			puts (_i->result);
+		Tcl_EvalFile (_i, TCL"display.tcl");
+//		if (TCL_OK != Tcl_EvalFile (_i, TCL"display.tcl"))
+//			puts (_i->result);
 		char b[80];
 		sprintf (b, "display_init %d %d 8 8 %s", c, r, s);
-		if (TCL_OK != Tcl_Eval (_i, b))
-			puts (_i->result);
+		Tcl_Eval (_i, b);
+//		if (TCL_OK != Tcl_Eval (_i, b))
+//			puts (_i->result);
 	}
 	~TkDisplay () {
-		if (TCL_OK != Tcl_Eval (_i, "display_fini"))
-			puts (_i->result);
+		Tcl_Eval (_i, "display_fini");
+//		if (TCL_OK != Tcl_Eval (_i, "display_fini"))
+//			puts (_i->result);
 	}
 	void operator= (byte c) {
 		if (c != (byte)*this) {
 			char b[80];
 			sprintf (b, "display_at %d %d", _acc, c);
-			if (TCL_OK != Tcl_Eval (_i, b))
-				puts (_i->result);
+			Tcl_Eval (_i, b);
+//			if (TCL_OK != Tcl_Eval (_i, b))
+//				puts (_i->result);
 			display::operator= (c);
 		}
 	}

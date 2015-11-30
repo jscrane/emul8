@@ -69,7 +69,7 @@ int main(int argc, char *argv[])
 	Memory::address opc = 0xfffc;
 
 	jmp_buf ex;
-	r6502 cpu(memory, &ex, status);
+	r6502 cpu(memory, ex, status);
 	cpu.reset();
 
 	if (!setjmp(ex))

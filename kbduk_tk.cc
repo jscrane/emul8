@@ -189,7 +189,7 @@ bool kbd::Builder::build (Memory *m, int ac, const char **av) {
 	Tcl_CreateCommand (i, "key_delay", KeyDelay, _k, 0);
 	if (TCL_OK == Tcl_EvalFile (i, TCL"kbd.tcl"))
 		return true;
-	fprintf (stderr, "Tcl_Eval returns: %s\n", i->result);
+//	fprintf (stderr, "Tcl_Eval returns: %s\n", i->result);
 	return false;
 }
 

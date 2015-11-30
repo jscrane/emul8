@@ -5,7 +5,7 @@
 
 class i8080: public CPU {
 public:
-	i8080(Memory &, jmp_buf *, CPU::statfn, PortDevice<i8080> &);
+	i8080(Memory &, jmp_buf &, CPU::statfn, PortDevice<i8080> &);
 
 	void run(unsigned);
 	void reset();
@@ -309,11 +309,10 @@ private:
 	void sbba() { _sbc(A); }
 
 	inline void _and(byte b) {
-		flags.H = ((A | b) & 0x08) != 0;
 		A = A & b;
 		_szp(A);
-//		flags.C = flags.H = 0;
 		flags.C = 0;
+		flags.H = 1;
 	}
 
 	void anab() { _and(B); }

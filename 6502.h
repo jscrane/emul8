@@ -23,7 +23,7 @@ public:
 	void run (unsigned);
 	char *status ();
 
-	r6502 (Memory &, jmp_buf *, CPU::statfn);
+	r6502 (Memory &, jmp_buf &, CPU::statfn);
 private:
 	/* registers */
 	byte S, A, X, Y;

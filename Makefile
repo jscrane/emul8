@@ -15,7 +15,7 @@ MODSRC	= tk-emul8.cc 6502.cc ram.cc rom.cc display.cc kbduk_tk.cc tapeuk_tk.cc i
 MODHDR	= 6502.h ram.h display.h rom.h acia.h i8080.h
 MODOBJ	= $(foreach m, $(MODSRC), $(TARGET)/$(m:.cc=.so))
 TCLDIR	= tcllib/
-TCLHDRS = /usr/include/tcl8.5
+TCLHDRS = /usr/include/tcl8.6
 CONFIGS	= uk101
 INFO	= TO-DO BUGS CREDITS COPYING README
 

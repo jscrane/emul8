@@ -6,7 +6,7 @@
 
 class z80: public CPU {
 public:
-	z80(Memory &, jmp_buf *, CPU::statfn, PortDevice<z80> &);
+	z80(Memory &, jmp_buf &, CPU::statfn, PortDevice<z80> &);
 
 	void run(unsigned);
 	void reset();

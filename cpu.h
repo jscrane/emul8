@@ -39,9 +39,9 @@ public:
 
 protected:
 	Memory &_mem;
-	CPU (Memory &m, jmp_buf *e, statfn s): _mem(m), _err(e), _status(s) {}
+	CPU (Memory &m, jmp_buf &e, statfn s): _mem(m), _err(e), _status(s) {}
 	Memory::address PC;
-	jmp_buf *_err;
+	jmp_buf &_err;
 	statfn _status;
 	bool _debug;
 };

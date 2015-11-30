@@ -110,7 +110,7 @@ int main(int argc, char *argv[])
 
 	jmp_buf ex;
 	Ports ports(memory);
-	i8080 cpu(memory, &ex, status, ports);
+	i8080 cpu(memory, ex, status, ports);
 	cpu.reset();
 	cpu.run(256);
 	cpu.debug();

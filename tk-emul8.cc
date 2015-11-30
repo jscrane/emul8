@@ -25,8 +25,9 @@ static void status (const char *fmt, ...) {
 	sprintf (fbuf, "{%s}", fmt);
 	vsprintf (buf, fbuf, args);
 	va_end (args);
-	if (TCL_OK!=Tcl_VarEval (interp, "status ", buf, 0))
-		fprintf (stderr, "Tcl_VarEval returns: %s\n", interp->result);
+	Tcl_VarEval (interp, "status ", buf, 0);
+//	if (TCL_OK!=Tcl_VarEval (interp, "status ", buf, 0))
+//		fprintf (stderr, "Tcl_VarEval returns: %s\n", interp->result);
 }
 
 /*

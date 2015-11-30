@@ -1,7 +1,7 @@
 CPPFLAGS=-I.. -DCPU_DEBUG
 #CPPFLAGS=-I..
 CXXFLAGS=-g
-LDLIBS=-L../i686-Linux -lemu -ldl
+LDLIBS=-L../x86_64-Linux -lemu -ldl
 
 test: test.o 6502.o
 	g++ -o $@ $+ $(LDLIBS)

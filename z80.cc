@@ -33,7 +33,7 @@ void z80::run(unsigned clocks) {
 #if !defined(CPU_DEBUG)
 		if (_halted) {
 			_status("CPU halted at %04x\r\n%s", PC, status());
-			longjmp(*_err, 1);
+			longjmp(_err, 1);
 		}
 #endif
 		if (_irq_pending && _iff1)
@@ -824,7 +824,7 @@ int z80::parity_table[] = {
 	1, 0, 0, 1, 0, 1, 1, 0, 0, 1, 1, 0, 1, 0, 0, 1,
 };
 
-z80::z80(Memory &m, jmp_buf *jb, CPU::statfn s, PortDevice<z80> &ports): CPU(m, jb, s)
+z80::z80(Memory &m, jmp_buf &jb, CPU::statfn s, PortDevice<z80> &ports): CPU(m, jb, s)
 {
 	_ports = &ports;
 	_debug = false;
