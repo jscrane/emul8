@@ -1,11 +1,14 @@
-CPPFLAGS=-I..
-CPPFLAGS=-I.. -DCPU_DEBUG -g
-#CXXFLAGS=-g -O3
+CPPFLAGS=-I.. -fno-operator-names
+#CPPFLAGS+=-DCPU_DEBUG -g
+CXXFLAGS=-g -O3
 LDLIBS=-L../x86_64-Linux -lemu -ldl -lcurses
 
-all: cpm CPM22.bin CBIOS.bin
+all: cpm z80cpm CPM22.bin CBIOS.bin
 
 cpm: cpm.o i8080.o ram.o
+	g++ -o $@ $+ $(LDLIBS)
+
+z80cpm: z80cpm.o z80.o ram.o
 	g++ -o $@ $+ $(LDLIBS)
 
 %.bin: %.ASM

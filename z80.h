@@ -2,7 +2,7 @@
 #define __Z80_H__
 
 #undef sbi
-#undef and
+#undef inch
 
 class z80: public CPU {
 public:
