@@ -42,7 +42,7 @@ private:
 		byte value;
 	} P;
 	byte _toBCD[256], _fromBCD[256];	// BCD maps
-	bool _irq;				// interrupt pending
+	bool _irq;				// interrupt pending?
 
 	void irq ();
 	void nmi ();
