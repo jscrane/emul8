@@ -71,7 +71,7 @@ void z80::_handle_interrupt() {
 }
 
 void z80::daa() {
-	byte c = flags.C, a = 0, hi = (A & 0xf0) >> 4, lo = A & 0x0f;
+	byte c = flags.C, a = 0, lo = A & 0x0f;
 	if (flags.H || lo > 9)
 		a = 0x06;
 	if (c || A > 0x99) {

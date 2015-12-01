@@ -154,7 +154,7 @@ private:
 		return _mem[a];
 	}
 
-	inline byte _sb(Memory::address a, byte b) {
+	inline void _sb(Memory::address a, byte b) {
 #if defined(CPU_DEBUG)
 		printf("%5d MC %04x\n", _ts, a);
 #endif
@@ -285,7 +285,6 @@ private:
 	}
 
 	inline void _sub(byte x) {
-		byte b = A;
 		flags.C = 1;
 		_adc(~x);
 		flags.C = !flags.C;
@@ -294,7 +293,6 @@ private:
 	}
 
 	inline void _sbc(byte x) {
-		byte b = A;
 		flags.C = !flags.C;
 		_adc(~x);
 		flags.C = !flags.C;
@@ -303,7 +301,6 @@ private:
 	}
 
 	inline void _sbc16(word w) {
-		word r = HL;
 		flags.C = !flags.C;
 		_adc16(~w);
 		flags.C = !flags.C;

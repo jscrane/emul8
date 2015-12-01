@@ -155,7 +155,7 @@ int main(int argc, char *argv[]) {
 
 	jmp_buf ex;
 	Ports ports(memory);
-	z80 cpu(memory, &ex, status, ports);
+	z80 cpu(memory, ex, status, ports);
 	cpu.reset();
 
 	FILE *fp = fopen(argv[1], "r");
