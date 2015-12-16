@@ -7,7 +7,8 @@ int main(int argc, char *argv[])
 {
 	int bin = 0, a = 1;
 	
-	if (argc != 2 || argc != 3) {
+printf("%d\n",argc);
+	if (argc != 3 && argc != 4) {
 		fprintf(stderr, "Usage: %s: [-b] image-file array-name\n", argv[0]);
 		return -1;
 	}
