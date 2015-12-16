@@ -5,31 +5,37 @@
 
 int main(int argc, char *argv[])
 {
-  int bin = 0, a = 1;
-  
-  if (strcmp(argv[a], "-b") == 0) {
-    bin = 1;
-    a++;
-  }
-  char *file = argv[a++], *name = argv[a];
-  FILE *f = fopen(file, "r");
+	int bin = 0, a = 1;
+	
+	if (argc != 2 || argc != 3) {
+		fprintf(stderr, "Usage: %s: [-b] image-file array-name\n", argv[0]);
+		return -1;
+	}
 
-  printf("static const unsigned char %s[] = {", name);
+	if (strcmp(argv[a], "-b") == 0) {
+		bin = 1;
+		a++;
+	}
+	char *file = argv[a++], *name = argv[a];
+	FILE *f = fopen(file, "r");
 
-  for (int i = 0; ; i++) {
-    unsigned c;
-    int n;
-    if (bin)
-      n = fread(&c, 1, 1, f);
-    else
-      n = fscanf(f, "%02x", &c);
-    if (!(i % 8))
-      printf("\n\t");
-    if (n <= 0)
-      break;
-    printf("0x%02x, ", c);
-  }
-  
-  printf("};\n");
-  fclose(f);
+	printf("static const unsigned char %s[] = {", name);
+
+	for (int i = 0; ; i++) {
+		unsigned c;
+		int n;
+		if (bin)
+			n = fread(&c, 1, 1, f);
+		else
+			n = fscanf(f, "%02x", &c);
+		if (!(i % 8))
+			printf("\n\t");
+		if (n <= 0)
+			break;
+		printf("0x%02x, ", c);
+	}
+	
+	printf("};\n");
+	fclose(f);
+	return 0;
 }
