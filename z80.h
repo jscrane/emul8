@@ -6,12 +6,12 @@
 
 class z80: public CPU {
 public:
-	z80(Memory &, jmp_buf &, CPU::statfn, PortDevice<z80> &);
+	z80(Memory &, PortDevice<z80> &);
 
 	void run(unsigned);
 	void reset();
 	void raise(int level) { _irq_pending = level; }
-	char *status();
+	char *status(char *buf, size_t n, bool hdr);
 
 	inline byte a() { return A; }
 	inline byte b() { return B; }
@@ -35,7 +35,6 @@ public:
 	inline word iy() { return IY; }
 	inline word sp() { return SP; }
 	inline word pc() { return PC; }
-	inline bool halted() { return _halted; }
 	inline bool iff1() { return _iff1; }
 	inline bool iff2() { return _iff2; }
 	inline byte im() { return _im; }
@@ -61,6 +60,7 @@ public:
 
 	inline unsigned long ts() { return _ts; }
 	inline void ts(int t) { _ts += t; }
+	inline void reset_ts() { _ts = 0; }
 
 private:
 	void _handle_interrupt();
@@ -133,7 +133,6 @@ private:
 	bool _iff1, _iff2;
 
 	unsigned long _ts;
-	bool _halted;
 
 	int _irq_pending;
 	PortDevice<z80> *_ports;

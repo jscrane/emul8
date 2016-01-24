@@ -1,6 +1,3 @@
-/*
- * cpu.h
- */
 #ifndef _CPU_H
 #define _CPU_H
 
@@ -20,29 +17,25 @@ class Memory;
 
 class CPU {
 public:
-	virtual void reset () =0;
-	virtual void run (unsigned instructions) =0;
-	virtual void raise (int level) =0;
-	virtual char *status () =0;
+	virtual void run(unsigned instructions) =0;
+	virtual void reset() =0;
+	virtual void raise(int level) =0;
+	virtual char *status(char *buf, size_t n, bool hdr) =0;
 
-	typedef void (*statfn) (const char *, ...);
-	typedef CPU *(*buildfn) (Memory &, jmp_buf *, statfn);
+	typedef CPU *(*buildfn) (Memory &);
 
 	static class Builder: private Loader {
 	public:
-		CPU *operator() (const char *, Memory &, jmp_buf *, statfn);
+		CPU *operator() (const char *, Memory &);
 	} build;
 
+	inline bool halted() { return _halted; }
 	Memory::address pc() { return PC; }
 
-	void debug();
-
 protected:
+	CPU(Memory &mem): _mem(mem), _halted(false) {}
 	Memory &_mem;
-	CPU (Memory &m, jmp_buf &e, statfn s): _mem(m), _err(e), _status(s) {}
 	Memory::address PC;
-	jmp_buf &_err;
-	statfn _status;
-	bool _debug;
+	bool _halted;
 };
 #endif

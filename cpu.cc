@@ -4,16 +4,15 @@
 #ifdef __GNUG__
 #pragma implementation
 #endif
+#include <stddef.h>
 
 #include "memory.h"
 #include "cpu.h"
 
 CPU::Builder CPU::build;
 
-CPU *CPU::Builder::operator() (const char *n, Memory &m, jmp_buf *e, statfn s) {
-	Loader::initfn i = load (n);
+CPU *CPU::Builder::operator()(const char *n, Memory &m) {
+	Loader::initfn i = load(n);
 	CPU::buildfn build = (CPU::buildfn)i;
-	return build (m, e, s);
+	return build(m);
 }
-
-void CPU::debug() { _debug = !_debug; }

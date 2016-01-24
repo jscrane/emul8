@@ -11,8 +11,8 @@ OBJECTS	= $(foreach f, $(SOURCES), $(TARGET)/$(f:.cc=.o))
 LIBRARY	= libemu
 DYLIB	= $(TARGET)/$(LIBRARY).so
 LIBRARIES = $(DYLIB)
-MODSRC	= tk-emul8.cc 6502.cc ram.cc rom.cc display.cc kbduk_tk.cc tapeuk_tk.cc i8080.cc
-MODHDR	= 6502.h ram.h display.h rom.h acia.h i8080.h
+MODSRC	= tk-emul8.cc 6502.cc ram.cc rom.cc display.cc kbduk_tk.cc tapeuk_tk.cc i8080.cc z80.cc
+MODHDR	= 6502.h ram.h display.h rom.h acia.h i8080.h z80.h
 MODOBJ	= $(foreach m, $(MODSRC), $(TARGET)/$(m:.cc=.so))
 TCLDIR	= tcllib/
 TCLHDRS = /usr/include/tcl8.6
@@ -22,7 +22,7 @@ INFO	= TO-DO BUGS CREDITS COPYING README
 CC	= g++
 LD	= g++
 CPPFLAGS= -I. -I$(TCLHDRS) -DTCL=\"$(TCLDIR)\" -DPIC
-CXXFLAGS= -O6 -fPIC -fomit-frame-pointer
+CXXFLAGS= -O6 -fPIC -fomit-frame-pointer -fno-operator-names
 
 ifdef $(DEBUG)
 CPPFLAGS+= -DDEBUG

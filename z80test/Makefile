@@ -1,4 +1,3 @@
-CPPFLAGS=-I..
 CPPFLAGS=-I.. -DCPU_DEBUG
 CXXFLAGS=-g -fno-operator-names
 LDLIBS=-L../x86_64-Linux -lemu -ldl

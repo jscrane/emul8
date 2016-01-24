@@ -53,15 +53,6 @@ private:
 	Memory &_mem;
 };
 
-void status(const char *fmt, ...) {
-	char tmp[512];
-	va_list args;
-	va_start(args, fmt);
-	vsnprintf(tmp, sizeof(tmp), fmt, args);
-	printf(tmp);
-	va_end(args);
-}
-
 int read_test(FILE *f, z80 &z, Memory &m) {
 	unsigned af, bc, de, hl, af_, bc_, de_, hl_, ix, iy, sp, pc;
 	unsigned i, r, iff1, iff2, im;
@@ -130,8 +121,6 @@ void dump_cpu_state(z80 &z) {
 		z.hl_(), z.ix(), z.iy(), z.sp(), z.pc());
 	printf("%02x %02x %d %d %d %d %d\n",
 		z.i(), z.r(), z.iff1(), z.iff2(), z.im(), z.halted(), z.ts());
-//	printf("%02x %02x %d %d %d %d %d\n", I, (R7 & 0x80) | (R & 0x7f),
-//		IFF1, IFF2, IM, z80.halted, tstates);
 }
 
 void dump_memory_state(byte b[], Memory &m) {
@@ -153,9 +142,8 @@ int main(int argc, char *argv[]) {
 	ram ram(65536);
 	memory.put(ram, 0x0000);
 
-	jmp_buf ex;
 	Ports ports(memory);
-	z80 cpu(memory, ex, status, ports);
+	z80 cpu(memory, ports);
 	cpu.reset();
 
 	FILE *fp = fopen(argv[1], "r");
@@ -164,28 +152,27 @@ int main(int argc, char *argv[]) {
 		return -1;
 	}
 
-	if (!setjmp(ex))
-		while (true) {
-			byte backup[0x10000];
-			for (unsigned i = 0; i < 0x10000; ) {
-				memory[i++] = 0xde; memory[i++] = 0xad;
-				memory[i++] = 0xbe; memory[i++] = 0xef;
-			}
-
-			int end_ts = read_test(fp, cpu, memory);
-			if (0 > end_ts)
-				break;
-
-			for (unsigned i = 0; i < 0x10000; i++)
-				backup[i] = memory[i];
-
-			while (cpu.ts() < end_ts)
-				cpu.run(1);
-
-			dump_cpu_state(cpu);
-			dump_memory_state(backup, memory);
-			cpu.reset();
+	while (true) {
+		byte backup[0x10000];
+		for (unsigned i = 0; i < 0x10000; ) {
+			memory[i++] = 0xde; memory[i++] = 0xad;
+			memory[i++] = 0xbe; memory[i++] = 0xef;
 		}
+
+		int end_ts = read_test(fp, cpu, memory);
+		if (0 > end_ts)
+			break;
+
+		for (unsigned i = 0; i < 0x10000; i++)
+			backup[i] = memory[i];
+
+		while (cpu.ts() < end_ts)
+			cpu.run(1);
+
+		dump_cpu_state(cpu);
+		dump_memory_state(backup, memory);
+		cpu.reset();
+	}
 
 	fclose(fp);
 }

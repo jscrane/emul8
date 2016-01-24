@@ -1,5 +1,4 @@
-CPPFLAGS=-I.. -DCPU_DEBUG
-#CPPFLAGS=-I..
+CPPFLAGS=-I..
 CXXFLAGS=-g
 LDLIBS=-L../x86_64-Linux -lemu -ldl
 

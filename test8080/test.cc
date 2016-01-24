@@ -86,15 +86,6 @@ int load_com(Memory &memory, const char *file, unsigned short a) {
 	return 0;
 }
 
-void status(const char *fmt, ...) {
-	char tmp[128];
-	va_list args;
-	va_start(args, fmt);
-	vsnprintf(tmp, sizeof(tmp), fmt, args);
-	fprintf(stderr, tmp);
-	va_end(args);
-}
-
 int main(int argc, char *argv[])
 {
 	if (argc < 2) {
@@ -108,12 +99,10 @@ int main(int argc, char *argv[])
 	if (0 > load_com(memory, argv[1], 0x100))
 		return -1;
 
-	jmp_buf ex;
 	Ports ports(memory);
-	i8080 cpu(memory, ex, status, ports);
+	i8080 cpu(memory, ports);
 	cpu.reset();
 	cpu.run(256);
-	cpu.debug();
 	memory[0] = 0x76;	// hlt
 	memory[5] = 0x79;	// movac
 	memory[6] = 0xd3;	// out
@@ -121,12 +110,11 @@ int main(int argc, char *argv[])
 	memory[8] = 0xd9;	// ret
 	Memory::address opc = cpu.pc();
 
-	if (!setjmp(ex))
-		while (true) {
-			cpu.run(1);
-			Memory::address pc = cpu.pc();
-			if (pc == opc)
-				break;
-			opc = pc;
-		}
+	while (true) {
+		cpu.run(1);
+		Memory::address pc = cpu.pc();
+		if (pc == opc)
+			break;
+		opc = pc;
+	}
 }

@@ -171,14 +171,10 @@ int main(int argc, char *argv[])
 	memory[1] = 0x00;
 	memory[2] = 0xfa;
 
-	jmp_buf ex;
 	Ports ports(memory);
-	z80 cpu(memory, ex, status, ports);
+	z80 cpu(memory, ports);
 	cpu.reset();
-	if (dbg)
-		cpu.debug();
 
-	if (!setjmp(ex))
-		while (true)
-			cpu.run(1);
+	while (true)
+		cpu.run(1);
 }

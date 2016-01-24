@@ -13,11 +13,10 @@
  */
 static Tcl_Interp *interp;
 static bool halt=false;
-static jmp_buf ex;
 
-extern "C" Tcl_Interp *getInterp () { return interp; }
+extern "C" Tcl_Interp *getInterp() { return interp; }
 
-static void status (const char *fmt, ...) {
+static void status(const char *fmt, ...) {
 	va_list args;
 	va_start (args, fmt);
 	char buf[1024];
@@ -33,47 +32,45 @@ static void status (const char *fmt, ...) {
 /*
  * commands added to the interpreter
  */
-extern "C" int StartCPU (ClientData d, Tcl_Interp *i, int ac, const char **av) {
+extern "C" int StartCPU(ClientData d, Tcl_Interp *i, int ac, const char **av) {
 	CPU *cpu = (CPU *)d;
-	if (!setjmp (ex)) {
-		for (halt=false; !halt; ) {
-			cpu->run (1000);
-			Tcl_DoOneEvent (TCL_ALL_EVENTS | TCL_DONT_WAIT);
-		}
-		status ("User Break");
+	for (halt=false; !halt; ) {
+		cpu->run (1000);
+		Tcl_DoOneEvent (TCL_ALL_EVENTS | TCL_DONT_WAIT);
 	}
 	return TCL_OK;
 }
 
-extern "C" int StopCPU (ClientData, Tcl_Interp *, int, const char **) {
+extern "C" int StopCPU(ClientData, Tcl_Interp *, int, const char **) {
 	halt = true;
 	return TCL_OK;
 }
  
-extern "C" int CPU_Status (ClientData d, Tcl_Interp *i, int, const char **) {
+extern "C" int CPU_Status(ClientData d, Tcl_Interp *i, int, const char **) {
 	CPU *cpu = (CPU *)d;
-	Tcl_SetResult (i, cpu->status (), TCL_STATIC);
+	char buf[256];
+	Tcl_SetResult (i, cpu->status(buf, sizeof(buf), true), TCL_STATIC);
 	return TCL_OK;
 }
 
-extern "C" int ResetCPU (ClientData d, Tcl_Interp *, int, const char **) {
+extern "C" int ResetCPU(ClientData d, Tcl_Interp *, int, const char **) {
 	CPU *cpu = (CPU *)d;
 	cpu->reset ();
 	return TCL_OK;
 }
 
-extern "C" void DeleteProcessor (ClientData d) {
+extern "C" void DeleteProcessor(ClientData d) {
 	CPU *cpu = (CPU *)d;
 	delete cpu;
 }
 
-extern "C" int Processor (ClientData d, Tcl_Interp *i, int ac, const char **av) {
+extern "C" int Processor(ClientData d, Tcl_Interp *i, int ac, const char **av) {
 	if (ac != 2) {
 		Tcl_SetResult (i, "Wrong # args", TCL_STATIC);
 		return TCL_ERROR;
 	}
 	Memory *m = (Memory *)d;
-	CPU *cpu = CPU::build (av[1], *m, &ex, status);
+	CPU *cpu = CPU::build (av[1], *m);
 	if (!cpu) {
 		Tcl_SetResult (i, "Unknown processor: ", TCL_STATIC);
 		Tcl_AppendElement (i, av[1]);
@@ -86,7 +83,7 @@ extern "C" int Processor (ClientData d, Tcl_Interp *i, int ac, const char **av) 
 	return TCL_OK;
 }
 
-extern "C" int Device (ClientData d, Tcl_Interp *i, int ac, const char **av) {
+extern "C" int Device(ClientData d, Tcl_Interp *i, int ac, const char **av) {
 	Memory *m = (Memory *)d;
 	Chain<Memory::Device::Builder>::Iter b = m->devices.begin ();
 	for (; b; b++)
@@ -102,7 +99,7 @@ extern "C" int Device (ClientData d, Tcl_Interp *i, int ac, const char **av) {
 	return TCL_ERROR;
 }
 
-extern "C" int Iterator (ClientData d, Tcl_Interp *i, int ac, const char **av) {
+extern "C" int Iterator(ClientData d, Tcl_Interp *i, int ac, const char **av) {
 	Memory::Iter &m = *(Memory::Iter *)d;
 	char buf[80];
 	if (ac == 1) {
@@ -128,12 +125,12 @@ extern "C" int Iterator (ClientData d, Tcl_Interp *i, int ac, const char **av) {
 	return TCL_OK;
 }
 
-extern "C" void DeleteIterator (ClientData d) {
+extern "C" void DeleteIterator(ClientData d) {
 	Memory::Iter *m = (Memory::Iter *)d;
 	delete m;
 }
 
-extern "C" int Query (ClientData d, Tcl_Interp *i, int ac, const char **av) {
+extern "C" int Query(ClientData d, Tcl_Interp *i, int ac, const char **av) {
 	if (ac != 2) {
 		Tcl_SetResult (i, "Wrong # args", TCL_STATIC);
 		return TCL_ERROR;
@@ -147,7 +144,7 @@ extern "C" int Query (ClientData d, Tcl_Interp *i, int ac, const char **av) {
 /*
  * called when the script invokes "load tk-emul8.so Emulator"
  */
-extern "C" int Emulator_Init (Tcl_Interp *i) {
+extern "C" int Emulator_Init(Tcl_Interp *i) {
 	Memory *memory = new Memory;
 	Tcl_CreateCommand (i, "device", Device, memory, 0);
 	Tcl_CreateCommand (i, "query", Query, memory, 0);

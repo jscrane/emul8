@@ -7,14 +7,12 @@
 #include "6502.h"
 
 void r6502::run (unsigned clocks) {
-	while (clocks--) 
-	{
+	while (clocks--) {
 		byte op = _mem[PC];
-#ifdef CPU_DEBUG
-		_status ("%04x: %02x [%02x %02x %02x, %02x]\n", PC, op, A, X, Y, flags());
-#endif
 		PC++;
-		(this->*_ops[op]) ();
+		(this->*_ops[op])();
+		if (_halted)
+			break;
 	}
 }
 
@@ -24,87 +22,92 @@ byte r6502::flags() {
 	P.bits.Z = !Z;
 	P.bits.C = C;
 	P.bits._ = 1;
-	return P.value;
+	return P.flags;
 }
 
-char *r6502::status () {
-	static char buf[128];
+char *r6502::status(char *buf, size_t n, bool hdr) {
 	flags();
-	sprintf (buf, "aa xx yy sp nv_bdizc  _pc_\n"
-		 "%02x %02x %02x %02x %d%d%d%d%d%d%d%d  %04x\n", 
-		 A, X, Y, S, P.bits.N, P.bits.V, P.bits._, P.bits.B,
-		 P.bits.D, P.bits.I, P.bits.Z, P.bits.C, PC);
+	snprintf(buf, n, 
+		"%s%02x %02x %02x %02x %d%d%d%d%d%d%d%d %04x",
+		hdr? "aa xx yy sp nv_bdizc _pc_\r\n": "",
+		A, X, Y, S, P.bits.N, P.bits.V, P.bits._, P.bits.B,
+		P.bits.D, P.bits.I, P.bits.Z, P.bits.C, PC);
 	return buf;
 }
 
 void r6502::raise (int level) {
 	if (level < 0)
-		nmi ();
+		nmi();
 	else if (!P.bits.I)
-		irq ();
+		irq();
 	else
 		_irq = true;
 }
 
-void r6502::irq () {
-	pusha (PC+1);
+void r6502::irq() {
+	pusha(PC);
 	P.bits.B = 0;
-	pushb (flags ());
+	pushb(flags());
 	P.bits.B = 1;
 	P.bits.I = 1;
-	PC = vector (ibvec);
+	PC = vector(ibvec);
 	_irq = false;
+}
+
+void r6502::brk() {
+	if (!P.bits.I) {
+		pusha(PC+1);
+		php();
+		P.bits.I = 1;
+		PC = vector(ibvec);
+	}
+	P.bits.B = 1;
+	P.bits._ = 1;
+}
+
+void r6502::rti() {
+	plp();
+	PC = popa();
+}
+
+void r6502::cli() {
+	P.bits.I = 0;
+	if (_irq)
+		irq();
+}
+
+void r6502::nmi() {
+	pusha(PC);
+	php();
+	P.bits.I = 1;
+	PC = vector(nmivec);
 }
 
 // php and plp are complicated by the representation
 // of the processor state for efficient normal operation
-void r6502::php () {
+void r6502::php() {
 	P.bits.B = 1;
-	pushb (flags ());
+	pushb(flags());
 }
 
-void r6502::plp () {
-	P.value = popb ();
+void r6502::plp() {
+	P.flags = popb();
 	N = P.bits.N? 0x80: 0;
 	V = P.bits.V;
 	Z = !P.bits.Z;
 	C = P.bits.C;
 }
 
-void r6502::rts () {
-	PC = popa () + 1;
+void r6502::rts() {
+	PC = popa()+1;
 }
 
-void r6502::rti () {
-	plp ();
-	PC = popa ();
+void r6502::jsr() {
+	pusha(PC+1);
+	PC = vector(PC);
 }
 
-void r6502::nmi () {
-	pusha (PC);
-	php ();
-	P.bits.I = 1;
-	PC = vector (nmivec);
-}
-
-void r6502::brk () {
-	if (!P.bits.I) {
-		pusha (PC+1);
-		P.bits.B = 1;
-		php ();
-		P.bits.I = 1;
-		PC = vector (ibvec);
-	}
-	P.bits.B = 1;
-	P.bits._ = 1;
-}
-
-void r6502::jsr () {
-	pusha (PC+1);
-	PC = vector (PC);
-}
-
-void r6502::_adc (byte d) {
+void r6502::_adc(byte d) {
 	if (P.bits.D) {
 		int r = _fromBCD[A] + _fromBCD[d] + C;
 		C = (r > 99);
@@ -121,7 +124,7 @@ void r6502::_adc (byte d) {
 	Z = A;
 }
 
-void r6502::sbcd (byte d) {
+void r6502::sbcd(byte d) {
 	int r = _fromBCD[A] - _fromBCD[d] - !C;
 	C = (r >= 0);
 	if (r < 0) r += 100;
@@ -131,27 +134,29 @@ void r6502::sbcd (byte d) {
 	// V not tested for: http://www.6502.org/tutorials/decimal_mode.html
 }
 
-void r6502::ill () {
-	_status ("Illegal instruction!\n");
-	longjmp (_err, 1);
+void r6502::ill() {
+	--PC;
+	_halted = true;
 }
 
-void r6502::reset () {
-	P.value = 0;
+void r6502::reset()
+{
+	_halted = false;
+	P.flags = 0;
 	P.bits._ = 1;
 	P.bits.B = 1;
 	_irq = false;
 	S = 0xff;
-	PC = vector (resvec);
+	PC = vector(resvec);
 }
 
-r6502::r6502 (Memory &m, jmp_buf &e, CPU::statfn s): CPU (m,e,s) {
+r6502::r6502(Memory &m): CPU(m) {
 
 	for (int i=0; i < 256; i++) {
 		_fromBCD[i] = ((i >> 4) & 0x0f)*10 + (i & 0x0f);
 		_toBCD[i] = (((i % 100) / 10) << 4) | (i % 10);
 	}
-		
+
 	OP *p = _ops;
 	*p++=&r6502::brk; *p++=&r6502::ora_ix; *p++=&r6502::ill; *p++=&r6502::ill; 
 	*p++=&r6502::nop2; *p++=&r6502::ora_z; *p++=&r6502::asl_z; *p++=&r6502::ill;
@@ -220,6 +225,6 @@ r6502::r6502 (Memory &m, jmp_buf &e, CPU::statfn s): CPU (m,e,s) {
 }
 
 // module initialisation
-extern "C" CPU *init_6502 (Memory &m, jmp_buf &e, CPU::statfn s) {
-	return new r6502 (m, e, s);
+extern "C" CPU *init_6502(Memory &m) {
+	return new r6502(m);
 }

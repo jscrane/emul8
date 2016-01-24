@@ -41,15 +41,6 @@ int ramimage::load(const char *file) {
 	return 0;
 }
 
-void status(const char *fmt, ...) {
-	char tmp[128];
-	va_list args;
-	va_start(args, fmt);
-	vsnprintf(tmp, sizeof(tmp), fmt, args);
-	printf(tmp);
-	va_end(args);
-}
-
 int main(int argc, char *argv[])
 {
 	if (argc < 2) {
@@ -68,18 +59,20 @@ int main(int argc, char *argv[])
 	memory[0xfffd] = 0x04;
 	Memory::address opc = 0xfffc;
 
-	jmp_buf ex;
-	r6502 cpu(memory, ex, status);
+	r6502 cpu(memory);
 	cpu.reset();
 
-	if (!setjmp(ex))
-		while (true) {
-			cpu.run(1111);
-			Memory::address pc = cpu.pc();
-			if (pc == opc)
-				break;
-			opc = pc;
-		}
+	char buf[256];
+	while (true) {
+		cpu.run(1);
+#ifdef DEBUG
+		puts(cpu.status(buf, sizeof(buf), false));
+#endif
+		Memory::address pc = cpu.pc();
+		if (pc == opc)
+			break;
+		opc = pc;
+	}
 
-	printf(cpu.status());
+	puts(cpu.status(buf, sizeof(buf), true));
 }
