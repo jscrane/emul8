@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include <stdint.h>
 #include <setjmp.h>
 #include <stdarg.h>
 #include <errno.h>
@@ -54,7 +55,7 @@ private:
 };
 
 int read_test(FILE *f, z80 &z, Memory &m) {
-	unsigned af, bc, de, hl, af_, bc_, de_, hl_, ix, iy, sp, pc;
+	unsigned af, bc, de, hl, af_, bc_, de_, hl_, ix, iy, sp, pc, memptr;
 	unsigned i, r, iff1, iff2, im;
 	unsigned halted, end_tstates2, address;
 	char test_name[80];
@@ -69,8 +70,9 @@ int read_test(FILE *f, z80 &z, Memory &m) {
 
 	printf("%s", test_name);
 
-	if (fscanf(f, "%x %x %x %x %x %x %x %x %x %x %x %x", &af, &bc,
-		&de, &hl, &af_, &bc_, &de_, &hl_, &ix, &iy, &sp, &pc) != 12) 
+	if (fscanf(f, "%x %x %x %x %x %x %x %x %x %x %x %x %x", 
+		&af, &bc, &de, &hl, &af_, &bc_, &de_, &hl_, &ix, &iy, 
+		&sp, &pc, &memptr) != 13) 
 	{
 		fprintf(stderr, "first registers' line corrupt\n");
 		return -1;
@@ -79,6 +81,7 @@ int read_test(FILE *f, z80 &z, Memory &m) {
 	z.af(af);	z.bc(bc);	z.de(de);	z.hl(hl);
 	z.af_(af_);	z.bc_(bc_);	z.de_(de_);	z.hl_(hl_);
 	z.ix(ix);	z.iy(iy);	z.sp(sp);	z.pc(pc);
+	z.memptr(memptr);
 
 	if (fscanf(f, "%x %x %u %u %u %d %d", &i, &r, &iff1, &iff2, &im,
 		&halted, &end_tstates2 ) != 7) 
@@ -111,14 +114,13 @@ int read_test(FILE *f, z80 &z, Memory &m) {
 			m[address++] = byte;
 		}
 	}
-
 	return end_tstates2;
 }
 
 void dump_cpu_state(z80 &z) {
-	printf("%04x %04x %04x %04x %04x %04x %04x %04x %04x %04x %04x %04x\n",
+	printf("%04x %04x %04x %04x %04x %04x %04x %04x %04x %04x %04x %04x %04x\n",
 		z.af(), z.bc(), z.de(), z.hl(), z.af_(), z.bc_(), z.de_(), 
-		z.hl_(), z.ix(), z.iy(), z.sp(), z.pc());
+		z.hl_(), z.ix(), z.iy(), z.sp(), z.pc(), z.memptr());
 	printf("%02x %02x %d %d %d %d %d\n",
 		z.i(), z.r(), z.iff1(), z.iff2(), z.im(), z.halted(), z.ts());
 }

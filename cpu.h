@@ -15,6 +15,9 @@
 
 class Memory;
 
+#define O(o, e) case o: e(); break;
+#define D(e) default: e(); break;
+
 class CPU {
 public:
 	virtual void run(unsigned instructions) =0;
