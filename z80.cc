@@ -745,6 +745,7 @@ void z80::ed() {
 		b += A;
 		flags.P = (BC != 0);
 		_35(b);
+		flags._5 = ((b & 0x02) != 0);
 		flags.N = flags.H = 0;
 		if (BC) {
 			_mc(DE, 1); _mc(DE, 1); _mc(DE, 1);
@@ -764,6 +765,7 @@ void z80::ed() {
 		flags.N = 1;
 		flags.P = (BC != 0);
 		_sz35(c);
+		flags._5 = ((c & 0x02) != 0);
 		// FIXME: flag H
 		_memptr--;
 		if (BC) {

@@ -13,7 +13,7 @@ g++ -g -fno-operator-names -I.. -DCPU_DEBUG -o ram.o -c ../ram.cc
 g++ -o z80test z80test.o z80.o ram.o -L../x86_64-Linux -lemu -ldl
 ./z80test tests.in > tests.me
 md5sum tests.me
-57da905261bbe344436edd184176731c  tests.me
+27979ee205ff2a49c1f081a0433d0240 tests.me
 $ vi -d tests.expected tests.me
 ```
 
@@ -38,11 +38,5 @@ Flag Errors
 |eda9	|bf	|9f	|cpd		| E:5	|
 |edb0	|00	|20	|ldir		| G:5	|
 |edb0_2	|20	|00	|		| E:5	|
-|edb1_2	|87	|a7	|		| G:5	|
-|edb8	|69	|49	|lddr		| E:5	|
-|edb8_1	|20	|00	|		| E:5	|
-|edb8_2	|00	|20	|		| G:5	|
-|edb9	|0b	|2b	|cpdr		| G:5	|
-|edb9_1	|0b	|2b	|		| G:5	|
-|edb9_2	|a7	|87	|		| E:5	|
+|edb1_2	|87	|a7	|cpir		| G:5	|
 |edba_1	|00	|04	|indr		| G:P	|
