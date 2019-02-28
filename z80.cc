@@ -565,6 +565,7 @@ void z80::ed() {
 		b += A;
 		flags.P = (BC != 0);
 		_35(b);
+		flags._5 = ((b & 0x02) != 0);
 		flags.N = flags.H = 0;
 		break;
 	case 0xa1:
@@ -582,6 +583,7 @@ void z80::ed() {
 		flags.C = f;
 		flags.P = (BC != 0);
 		_35(b);
+		flags._5 = ((b & 0x02) != 0);
 		_memptr++;
 		break;
 	case 0xa2:
@@ -619,11 +621,12 @@ void z80::ed() {
 		b += A;
 		flags.P = (BC != 0);
 		_35(b);
+		flags._5 = ((b & 0x02) != 0);
 		flags.N = flags.H = 0;
 		break;
 	case 0xa9:
 		b = _rb(HL);
-		c = A - b;
+		c = A - b - flags.H;
 		_mc(HL, 1); _mc(HL, 1); _mc(HL, 1);
 		_mc(HL, 1); _mc(HL, 1);
 		HL--;
@@ -631,6 +634,7 @@ void z80::ed() {
 		flags.N = 1;
 		flags.P = (BC != 0);
 		_sz35(c);
+		flags._5 = ((c & 0x02) != 0);
 		_memptr--;
 		// FIXME: flag H
 		break;
