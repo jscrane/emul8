@@ -497,7 +497,7 @@ private:
 	inline void inca() { _inc(A); }
 	inline void deca() { _dec(A); }
 	inline void lda() { A = _rb(PC++); }
-	inline void ccf() { flags.C = !flags.C; flags.N = 0; _35(A); }
+	inline void ccf() { flags.H = flags.C; flags.C = flags.N = 0; _35(A); }
 
 	// 0x40
 	inline void ldbb() {}
