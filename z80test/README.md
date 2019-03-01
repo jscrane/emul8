@@ -13,7 +13,7 @@ g++ -g -fno-operator-names -I.. -DCPU_DEBUG -o ram.o -c ../ram.cc
 g++ -o z80test z80test.o z80.o ram.o -L../x86_64-Linux -lemu -ldl
 ./z80test tests.in > tests.me
 md5sum tests.me
-f8b8509523cdd2babe1428c2fc538dbf tests.me
+b36d7fc374cd889b8a100b759fac104e tests.me
 $ vi -d tests.expected tests.me
 ```
 
