@@ -32,7 +32,5 @@ Flag Errors
 |cb5e	|10	|38	|bit 3,(hl)	| G:5,3	|
 |cb6e	|10	|30	|bit 5,(hl)	| G:5	|
 |cb76	|54	|5c	|bit 6,(hl)	| G:3	|
-|edb0	|00	|20	|ldir		| G:5	|
-|edb0_2	|20	|00	|		| E:5	|
 |edb1_2	|87	|a7	|cpir		| G:5	|
 |edba_1	|00	|04	|indr		| G:P	|
