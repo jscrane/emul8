@@ -555,6 +555,7 @@ void z80::ed() {
 		SP = _rwPC();
 		break;
 	case 0xa0:
+		// ldi
 		b = _rb(HL);
 		BC--;
 		_sb(DE, b);
@@ -569,6 +570,7 @@ void z80::ed() {
 		flags.N = flags.H = 0;
 		break;
 	case 0xa1:
+		// cpi
 		b = _rb(HL);
 		_mc(HL, 1); _mc(HL, 1); _mc(HL, 1);
 		_mc(HL, 1); _mc(HL, 1);
@@ -587,6 +589,7 @@ void z80::ed() {
 		_memptr++;
 		break;
 	case 0xa2:
+		// ini
 		_mc(IR, 1);
 		b = _inr(BC);
 		_sb(HL, b);
@@ -599,6 +602,7 @@ void z80::ed() {
 		_sz35(B);
 		break;
 	case 0xa3:
+		// outi
 		_mc(IR, 1);
 		b = _rb(HL);
 		B--;
@@ -611,6 +615,7 @@ void z80::ed() {
 		_sz35(B);
 		break;
 	case 0xa8:
+		// ldd
 		b = _rb(HL);
 		BC--;
 		_sb(DE, b);
@@ -625,6 +630,7 @@ void z80::ed() {
 		flags.N = flags.H = 0;
 		break;
 	case 0xa9:
+		// cpd
 		b = _rb(HL);
 		c = A - b - flags.H;
 		_mc(HL, 1); _mc(HL, 1); _mc(HL, 1);
@@ -639,6 +645,7 @@ void z80::ed() {
 		// FIXME: flag H
 		break;
 	case 0xaa:
+		// ind
 		_mc(IR, 1);
 		b = _inr(BC);
 		_memptr = BC-1;
@@ -652,6 +659,7 @@ void z80::ed() {
 		_sz35(B);
 		break;
 	case 0xab:
+		// outd
 		_mc(IR, 1);
 		b = _rb(HL);
 		B--;
@@ -665,6 +673,7 @@ void z80::ed() {
 		_sz35(B);
 		break;
 	case 0xb0:
+		// ldir
 		b = _rb(HL);
 		BC--;
 		_sb(DE, b);
@@ -685,6 +694,7 @@ void z80::ed() {
 		HL++;
 		break;
 	case 0xb1:
+		// cpir
 		b = _rb(HL);
 		_mc(HL, 1); _mc(HL, 1); _mc(HL, 1);
 		_mc(HL, 1); _mc(HL, 1);
@@ -692,12 +702,13 @@ void z80::ed() {
 		f = (flags.C != 0);
 		_sub(b);
 		BC--;
-		b = A;
+		b -= A;
 		A = c;
 		flags.C = f;
 		flags.P = (BC != 0);
 		if (flags.H) b--;
 		_35(b);
+		flags._5 = ((b & 0x02) != 0);
 		_memptr++;
 		if (!flags.Z) {
 			_mc(HL, 1); _mc(HL, 1); _mc(HL, 1);
@@ -708,6 +719,7 @@ void z80::ed() {
 		HL++;
 		break;
 	case 0xb2:
+		// inir
 		_mc(IR, 1);
 		b = _inr(BC);
 		_sb(HL, b);
@@ -725,6 +737,7 @@ void z80::ed() {
 		HL++;
 		break;
 	case 0xb3:
+		// outir
 		_mc(IR, 1);
 		b = _rb(HL);
 		B--;
@@ -742,6 +755,7 @@ void z80::ed() {
 		}
 		break;
 	case 0xb8:
+		// lddr
 		b = _rb(HL);
 		BC--;
 		_sb(DE, b);
@@ -762,6 +776,7 @@ void z80::ed() {
 		HL--;
 		break;
 	case 0xb9:
+		// cpdr
 		b = _rb(HL);
 		c = A - b;
 		_mc(HL, 1); _mc(HL, 1); _mc(HL, 1);
@@ -782,6 +797,7 @@ void z80::ed() {
 		HL--;
 		break;
 	case 0xba:
+		// indr
 		_mc(IR, 1);
 		b = _inr(BC);
 		_memptr = BC-1;
@@ -800,6 +816,7 @@ void z80::ed() {
 		HL--;
 		break;
 	case 0xbb:
+		// outdr
 		_mc(IR, 1);
 		b = _rb(HL);
 		B--;
