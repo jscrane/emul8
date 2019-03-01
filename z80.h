@@ -934,7 +934,7 @@ private:
 	}
 
 	inline void _bitHL(int i) {
-		uint8_t b = _rb(HL); _mc(HL, 1); _bit(i, b);
+		uint8_t b = _rb(HL); _mc(HL, 1); _bit(i, b); _35(MPH);
 	}
 
 	inline void bit0b() { _bit(0, B); }
