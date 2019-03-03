@@ -145,7 +145,7 @@ private:
 	int _irq_pending;
 	PortDevice<z80> *_ports;
 
-	uint8_t parity_table(uint8_t);
+	uint8_t parity(uint8_t);
 
 	inline uint8_t _rb(Memory::address a) {
 #if defined(CPU_DEBUG)
@@ -219,7 +219,7 @@ private:
 
 	inline void _szp35(uint8_t r) {
 		_sz35(r);
-		flags.P = parity_table(r);
+		flags.P = parity(r);
 	}
 
 	inline void _inc(uint8_t &b) {

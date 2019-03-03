@@ -88,7 +88,7 @@ void z80::daa() {
 	else
 		_add(a);
 	flags.C = c;
-	flags.P = parity_table(A);
+	flags.P = parity(A);
 }
 
 void z80::_step_idx(EXT_OP f) {
@@ -598,7 +598,7 @@ void z80::ed() {
 		c = b + C + 1;
 		flags.N = (b & 0x80) != 0;
 		flags.C = flags.H = (c < b);
-		flags.P = parity_table((c & 0x07) ^ B);
+		flags.P = parity((c & 0x07) ^ B);
 		_sz35(B);
 		break;
 	case 0xa3:
@@ -611,7 +611,7 @@ void z80::ed() {
 		c = b + L;
 		flags.N = (b & 0x80) != 0;
 		flags.C = flags.H = (c < b);
-		flags.P = parity_table((c & 0x07) ^ B);
+		flags.P = parity((c & 0x07) ^ B);
 		_sz35(B);
 		break;
 	case 0xa8:
@@ -655,7 +655,7 @@ void z80::ed() {
 		c = b + C - 1;
 		flags.N = (b & 0x80) != 0;
 		flags.C = flags.H = (c < b);
-		flags.P = parity_table((c & 0x07) ^ B);
+		flags.P = parity((c & 0x07) ^ B);
 		_sz35(B);
 		break;
 	case 0xab:
@@ -669,7 +669,7 @@ void z80::ed() {
 		c = b + L;
 		flags.N = (b & 0x80) != 0;
 		flags.C = flags.H = (c < b);
-		flags.P = parity_table((c & 0x07) ^ B);
+		flags.P = parity((c & 0x07) ^ B);
 		_sz35(B);
 		break;
 	case 0xb0:
@@ -727,7 +727,7 @@ void z80::ed() {
 		c = b + flags.C + 1;
 		flags.N = (c & 0x80) != 0;
 		flags.C = flags.H = (c < b);
-		flags.P = parity_table((c & 0x07) ^ B);
+		flags.P = parity((c & 0x07) ^ B);
 		_sz35(B);
 		if (B) {
 			_mc(HL, 1); _mc(HL, 1); _mc(HL, 1);
@@ -746,7 +746,7 @@ void z80::ed() {
 		c = b + L;
 		flags.N = (b & 0x80) != 0;
 		flags.C = flags.H = (c < b);
-		flags.P = parity_table((c & 0x07) ^ B);
+		flags.P = parity((c & 0x07) ^ B);
 		_sz35(B);
 		if (B) {
 			_mc(BC, 1); _mc(BC, 1); _mc(BC, 1);
@@ -806,7 +806,7 @@ void z80::ed() {
 		c = b + flags.C + 1;
 		flags.N = (c & 0x80) != 0;
 		flags.C = flags.H = (c < b);
-		flags.P = parity_table((c & 0x07) ^ B);
+		flags.P = parity((c & 0x07) ^ B);
 		_sz35(B);
 		if (B) {
 			_mc(HL, 1); _mc(HL, 1); _mc(HL, 1);
@@ -826,7 +826,7 @@ void z80::ed() {
 		c = b + L;
 		flags.N = (b & 0x80) != 0;
 		flags.C = flags.H = (c < b);
-		flags.P = parity_table((c & 0x07) ^ B);
+		flags.P = parity((c & 0x07) ^ B);
 		_sz35(B);
 		if (B) {
 			_mc(BC, 1); _mc(BC, 1); _mc(BC, 1);
@@ -837,17 +837,14 @@ void z80::ed() {
 	}
 }
 
-const uint8_t partab[] = {
-	0x69, 0x96, 0x96, 0x69, 0x96, 0x69, 0x69, 0x96,
-	0x96, 0x69, 0x69, 0x96, 0x69, 0x96, 0x96, 0x69,
-	0x96, 0x69, 0x69, 0x96, 0x69, 0x96, 0x96, 0x69,
-	0x69, 0x96, 0x96, 0x69, 0x96, 0x69, 0x69, 0x96,
-};
-
-uint8_t z80::parity_table(uint8_t r) {
-	uint8_t i = r / 8, b = partab[i];
-	uint8_t m = (1 << (r % 8));
-	return m == (b & m);
+// kernighan's algorithm
+uint8_t z80::parity(uint8_t r) {
+	uint8_t c = 0;
+	while (r) {
+		r &= (r-1);
+		c++;
+	}
+	return !(c & 1);
 }
 
 void z80::cb() {
