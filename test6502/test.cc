@@ -1,5 +1,6 @@
 #include <fcntl.h>
 #include <stdio.h>
+#include <stdint.h>
 #include <stdarg.h>
 #include <unistd.h>
 #include "6502.h"
@@ -66,7 +67,7 @@ int main(int argc, char *argv[])
 	while (true) {
 		cpu.run(1);
 #ifdef DEBUG
-		puts(cpu.status(buf, sizeof(buf), false));
+		puts(cpu.status(buf, sizeof(buf)));
 #endif
 		Memory::address pc = cpu.pc();
 		if (pc == opc)
