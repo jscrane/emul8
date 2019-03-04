@@ -5,6 +5,7 @@
 #pragma implementation
 #endif
 #include <stddef.h>
+#include <stdint.h>
 
 #include "memory.h"
 #include "cpu.h"

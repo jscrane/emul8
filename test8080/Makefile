@@ -1,13 +1,13 @@
-CPPFLAGS=-I..
-#CPPFLAGS=-I.. -DCPU_DEBUG
-CXXFLAGS=-g -O3
-LDLIBS=-L../x86_64-Linux -lemu -ldl
+CPPFLAGS:=-I..
+CXXFLAGS:=-g
+LIBS:=../x86_64-Linux
+LDLIBS:=-L$(LIBS) -lemu -ldl
 
-test: test.o i8080.o ram.o
-	g++ -o $@ $+ $(LDLIBS)
+test: test.o
+	g++ -o $@ $+ $(LIBS)/ram.so $(LIBS)/i8080.so $(LDLIBS)
 
-%.o: ../%.cc
+%.o: %.cc
 	g++ $(CXXFLAGS) $(CPPFLAGS) -o $@ -c $<
 
 clean:
-	rm -f test test.o i8080.o
+	rm -f test test.o
