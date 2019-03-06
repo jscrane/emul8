@@ -15,8 +15,10 @@
 
 class Memory;
 
-#define O(o, e) case o: e(); break;
-#define D(e) default: e(); break;
+#define O(o, e) case o: e(); break
+#define A(o, e, a) case o: e(a); break
+#define C(o) case o:
+#define D(e) default: e(); break
 
 class CPU {
 public:
@@ -24,6 +26,7 @@ public:
 	virtual void reset() =0;
 	virtual void raise(uint8_t level) =0;
 	virtual char *status(char *buf, size_t n, bool hdr) =0;
+	virtual ~CPU() {}
 
 	typedef CPU *(*buildfn) (Memory &);
 

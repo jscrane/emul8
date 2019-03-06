@@ -21,8 +21,8 @@ INFO	= TO-DO BUGS CREDITS COPYING README
 
 CC	= g++
 LD	= g++
-CPPFLAGS= -I. -I$(TCLHDRS) -DTCL=\"$(TCLDIR)\" -DPIC
-CXXFLAGS= -O6 -fPIC -fomit-frame-pointer -fno-operator-names
+CPPFLAGS= -I. -I$(TCLHDRS) -DTCL=\"$(TCLDIR)\"
+CXXFLAGS= -O6 -fPIC -fomit-frame-pointer -fno-operator-names -Wall
 
 ifdef $(DEBUG)
 CPPFLAGS+= -DDEBUG

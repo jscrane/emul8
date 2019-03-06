@@ -87,8 +87,8 @@ public:
 		Iter &operator-- ();
 
 	private:
-		Device *_curr;
 		const Memory *_mem;
+		Device *_curr;
 	};
 
 	// primary access interface

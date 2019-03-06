@@ -17,19 +17,6 @@ static bool halt=false;
 
 extern "C" Tcl_Interp *getInterp() { return interp; }
 
-static void status(const char *fmt, ...) {
-	va_list args;
-	va_start (args, fmt);
-	char buf[1024];
-	char fbuf[128];
-	sprintf (fbuf, "{%s}", fmt);
-	vsprintf (buf, fbuf, args);
-	va_end (args);
-	Tcl_VarEval (interp, "status ", buf, 0);
-//	if (TCL_OK!=Tcl_VarEval (interp, "status ", buf, 0))
-//		fprintf (stderr, "Tcl_VarEval returns: %s\n", interp->result);
-}
-
 /*
  * commands added to the interpreter
  */

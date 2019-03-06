@@ -7,7 +7,7 @@
 class acia: public Memory::Device {
 public:
 	void operator= (byte) {}
-	operator byte () {}
+	operator byte () { return 0; }
 
 	acia (): Memory::Device(1) {}
 
