@@ -3,6 +3,13 @@
 #include <unistd.h>
 #include <string.h>
 #include <getopt.h>
+#include <stdlib.h>
+#include <errno.h>
+
+void usage(char *argv[]) {
+	fprintf(stderr, "Usage: %s: [-b] [-p] image-file array-name\n", argv[0]);
+	exit(-1);
+}
 
 int main(int argc, char *argv[])
 {
@@ -18,12 +25,20 @@ int main(int argc, char *argv[])
 			progmem = true;
 			break;
 		default:
-			fprintf(stderr, "Usage: %s: [-b] [-p] image-file array-name\n", argv[0]);
-			return -1;
+			usage(argv);
 		}
+
+	if (argc - optind < 2)
+		usage(argv);
+
 	int ind = optind;
 	char *file = argv[ind++], *name = argv[ind];
 	FILE *f = fopen(file, "r");
+
+	if (!f) {
+		fprintf(stderr, "%s: opening %s: %s\n", argv[0], file, strerror(errno));
+		exit(-1);
+	}
 
 	printf("static const uint8_t %s[] %s= {", name, progmem? "PROGMEM ": "");
 
