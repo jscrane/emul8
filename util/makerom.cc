@@ -28,7 +28,7 @@ int main(int argc, char *argv[])
 	printf("static const uint8_t %s[] %s= {", name, progmem? "PROGMEM ": "");
 
 	for (int i = 0; ; i++) {
-		unsigned c;
+		unsigned c = 0;
 		int n;
 		if (bin)
 			n = fread(&c, 1, 1, f);

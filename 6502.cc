@@ -204,3 +204,7 @@ void r6502::_op(uint8_t op) {
 	D(ill);
 	}
 }
+
+extern "C" CPU *init_6502(Memory &m) {
+	return new r6502(m);
+}

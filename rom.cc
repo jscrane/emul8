@@ -84,7 +84,7 @@ extern "C" int Prom (ClientData d, Tcl_Interp *i, int ac, const char **av) {
 extern "C" Tcl_Interp *getInterp ();
 
 rom::Builder::Builder (): _prom(strdup ("new_prom")) {
-	Tcl_Interp *i = getInterp ();
+	Tcl_Interp *i = GetInterp ();
 	if (TCL_OK == Tcl_EvalFile (i, TCL"prom.tcl"))
 		Tcl_CreateCommand (i, "prom", Prom, this, 0);
 //	else
